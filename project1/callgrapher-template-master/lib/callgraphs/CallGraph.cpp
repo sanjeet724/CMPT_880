@@ -52,11 +52,15 @@ CallGraphPass::handleInstruction(CallSite cs) {
     return;
   }
 
+  auto caller = cs.getCaller();
+  callSites.push_back(cs);
+  functionMap.insert(std::make_pair(caller,callSites));
+
   // Update the count for the particular call
   auto count = callCounts.find(called);
-  if (callCounts.end() == count) {
-    count = callCounts.insert(std::make_pair(called, 0)).first;
-  }
+  // if (callCounts.end() == count) {
+  //   count = callCounts.insert(std::make_pair(called, 0)).first;
+  // }
   ++count->second;
 }
 
@@ -67,8 +71,8 @@ bool
 WeightedCallGraphPass::runOnModule(Module &m) {
   // The results of the call graph pass can be extracted and used here.
   auto &cgPass = getAnalysis<CallGraphPass>();
-
   callCountsW = cgPass.callCounts;
+  computeWeights();
 
   return false;
 }
@@ -80,10 +84,22 @@ WeightedCallGraphPass::runOnModule(Module &m) {
 void
 WeightedCallGraphPass::print(raw_ostream &out, const Module *m) const {
   // Print out all functions
+  /*
   for (auto &kvPair : callCountsW) {
     auto *function = kvPair.first;
     uint64_t count = kvPair.second;
     out << function->getName() << "," << count << "\n";
+  }
+  */
+}
+
+void 
+WeightedCallGraphPass::computeWeights() {
+  auto &cgPass = getAnalysis<CallGraphPass>();
+  auto tempMap = cgPass.functionMap;
+  for (auto &kvPair: tempMap) {
+    auto *function = kvPair.first;
+    outs() << "Caller is: " << function->getName() << "\n";
   }
 }
 

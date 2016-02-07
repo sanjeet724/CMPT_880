@@ -84,3 +84,5 @@ demo/demobuild/tools/callcounter/config.h
 project1/build/bin/callgrapher
 
 project1/build/simple.ll
+
+*.txt

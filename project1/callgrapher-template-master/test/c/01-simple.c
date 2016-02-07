@@ -4,7 +4,7 @@ void a() {}
 
 void b() {}
 
-void c() {}
+void c() {a();}
 
 void d() {}
 
