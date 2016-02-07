@@ -49,24 +49,9 @@ CallGraphPass::handleInstruction(CallSite cs) {
     return;
   }
 
-  auto caller = cs.getCaller();
-  // Store each parent and child functions in a map (function* : vector of called functions)
-  /*
-  std::vector<llvm::Function*> calledFunctionVector;
-  auto parentFunction = functionMap.find(caller);
-  // outs() << caller->getName() << " calls " << called->getName() << "\n";
-  if (functionMap.end() == parentFunction) {
-      calledFunctionVector.push_back(called);
-      functionMap.insert(std::make_pair(caller,calledFunctionVector));
-
-  }
-  else {
-    parentFunction->second.push_back(called);
-  }
-  */
-
   // Store each CallSite of a function in a map (function* : vector of callsites)
   std::vector<llvm::CallSite> functionCSVector;
+  auto caller = cs.getCaller();
   auto parentFunction2 =  functionCallSiteMap.find(caller);
   if (functionCallSiteMap.end() == parentFunction2) {
     functionCSVector.push_back(cs);
@@ -75,15 +60,6 @@ CallGraphPass::handleInstruction(CallSite cs) {
   else {
     parentFunction2->second.push_back(cs);
   }
-
-  // Update the count for the particular call
-  // auto count = callCounts.find(called);
-  // if (callCounts.end() == count) {
-  //   count = callCounts.insert(std::make_pair(called, 0)).first;
-  // } 
-  // else {
-  //   ++count->second;
-  // }
 }
 
 // For an analysis pass, runOnModule should perform the actual analysis and
@@ -92,12 +68,11 @@ bool
 WeightedCallGraphPass::runOnModule(Module &m) {
   // The results of the call graph pass can be extracted and used here.
   auto &cgPass = getAnalysis<CallGraphPass>();
-  // callCountsW = cgPass.callCounts;
+  tempMap = cgPass.functionCallSiteMap;
   computeWeights();
   functionMetaData();
   outs() << "\n";
   functionEdges();
-  //printFunctionSiteMap();
   return false;
 }
 
@@ -120,8 +95,6 @@ WeightedCallGraphPass::print(raw_ostream &out, const Module *m) const {
 
 void 
 WeightedCallGraphPass::computeWeights() {
-  auto &cgPass = getAnalysis<CallGraphPass>();
-  auto tempMap = cgPass.functionCallSiteMap;
   // initialize the weights to 0 for all functions
   for (auto &kvPair:tempMap) {
      auto *function = kvPair.first;
@@ -146,8 +119,6 @@ WeightedCallGraphPass::computeWeights() {
 
 void
 WeightedCallGraphPass::functionMetaData() {
-  auto &cgPass = getAnalysis<CallGraphPass>();
-  auto tempMap = cgPass.functionCallSiteMap;
   for (auto &kvPair:functionWeights) {
     auto *function = kvPair.first;
     uint64_t weight = kvPair.second;
@@ -159,8 +130,6 @@ WeightedCallGraphPass::functionMetaData() {
 
 void 
 WeightedCallGraphPass::checkFunctionCalls(Function *searchFunction) {
-  auto &cgPass = getAnalysis<CallGraphPass>();
-  auto tempMap = cgPass.functionCallSiteMap;
   for (auto &kvPair:tempMap) {
     auto *function = kvPair.first;
     if (function == searchFunction) {
@@ -179,8 +148,6 @@ WeightedCallGraphPass::checkFunctionCalls(Function *searchFunction) {
 
 void
 WeightedCallGraphPass::functionEdges() {
-  auto &cgPass = getAnalysis<CallGraphPass>();
-  auto tempMap = cgPass.functionCallSiteMap;
   for (auto &kvPair:tempMap) {
     auto *function = kvPair.first;
     unsigned siteID = 0;

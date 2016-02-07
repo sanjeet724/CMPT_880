@@ -17,7 +17,6 @@ namespace callgraphs {
 struct CallGraphPass : public llvm::ModulePass {
 
   static char ID;
-
   // llvm::DenseMap<llvm::Function*, uint64_t> callCounts;
   // llvm::DenseMap<llvm::Function*, std::vector<llvm::Function*>> functionMap;
   llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionCallSiteMap;
@@ -41,9 +40,8 @@ public:
 struct WeightedCallGraphPass : public llvm::ModulePass {
 
   static char ID;
-
-  //llvm::DenseMap<llvm::Function*, uint64_t> callCountsW;
   llvm::DenseMap<llvm::Function*, uint64_t> functionWeights;
+  llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> tempMap;
 
   WeightedCallGraphPass()
     : ModulePass(ID)
