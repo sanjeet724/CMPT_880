@@ -53,18 +53,32 @@ CallGraphPass::handleInstruction(CallSite cs) {
     return;
   }
 
-  auto caller = cs.getCaller();
-  // outs() << caller->getName() << " calls " << called->getName() << "\n";
+  
+  // Store each parent and child functions in a map (function* : vector of functions)
   std::vector<llvm::Function*> calledFunctionVector;
-
+  auto caller = cs.getCaller();
   auto parentFunction = functionMap.find(caller);
+  // outs() << caller->getName() << " calls " << called->getName() << "\n";
   if (functionMap.end() == parentFunction) {
       calledFunctionVector.push_back(called);
       functionMap.insert(std::make_pair(caller,calledFunctionVector));
+
   }
   else {
     parentFunction->second.push_back(called);
   }
+
+  // Store each CallSite of a function
+  std::vector<llvm::CallSite> functionCSVector;
+  auto parentFunction2 =  functionCallSiteMap.find(caller);
+  if (functionCallSiteMap.end() == parentFunction2) {
+    functionCSVector.push_back(cs);
+    functionCallSiteMap.insert(std::make_pair(caller,functionCSVector));
+  }
+  else {
+    parentFunction2->second.push_back(cs);
+  }
+
  
   // Update the count for the particular call
   auto count = callCounts.find(called);
@@ -82,7 +96,8 @@ WeightedCallGraphPass::runOnModule(Module &m) {
   // The results of the call graph pass can be extracted and used here.
   auto &cgPass = getAnalysis<CallGraphPass>();
   callCountsW = cgPass.callCounts;
-  computeWeights();
+  // computeWeights();
+  computeWeightsFromCallSite();
 
   return false;
 }
@@ -107,7 +122,6 @@ void
 WeightedCallGraphPass::computeWeights() {
   auto &cgPass = getAnalysis<CallGraphPass>();
   auto tempMap = cgPass.functionMap;
-  std::vector<llvm::Function*> called;
   for (auto &kvPair: tempMap) {
     auto *function = kvPair.first;
     outs() << function->getName() << "-->";
@@ -116,5 +130,22 @@ WeightedCallGraphPass::computeWeights() {
       outs() << c->getName() << ",";
     }
     outs() << "\n";
+  }
+}
+
+void
+WeightedCallGraphPass::computeWeightsFromCallSite() {
+  auto &cgPass = getAnalysis<CallGraphPass>();
+  auto tempMap = cgPass.functionCallSiteMap;
+  for (auto &kvPair:tempMap) {
+    auto *function = kvPair.first;
+    unsigned siteID = 0;
+    std::vector<llvm::CallSite> calls = kvPair.second;
+    for (auto &c : calls) {
+      auto calledF = dyn_cast<Function>(c.getCalledValue());
+      outs() << function->getName() << "," << siteID << ","
+             << calledF->getName() << "\n" ;
+      ++siteID;
+    }
   }
 }

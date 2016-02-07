@@ -21,6 +21,7 @@ struct CallGraphPass : public llvm::ModulePass {
   // std::vector<llvm::Function*> calledFunctions;
   llvm::DenseMap<llvm::Function*, uint64_t> callCounts;
   llvm::DenseMap<llvm::Function*, std::vector<llvm::Function*>> functionMap;
+  llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionCallSiteMap;
 
 public:
   CallGraphPass()
@@ -60,6 +61,8 @@ struct WeightedCallGraphPass : public llvm::ModulePass {
   bool runOnModule(llvm::Module &m) override;
 
   void computeWeights();
+
+  void computeWeightsFromCallSite();
 };
 
 
