@@ -26,9 +26,6 @@ CallGraphPass::runOnModule(Module &m) {
   // A good design might be to use the CallGraphPass to compute the call graph
   // and then use that call graph for computing and printing the weights in
   // WeightedCallGraph.
-
-  // TODO: Compute the call graph
-
     for (auto &f : m) {
       for (auto &bb : f) {
         for (auto &i : bb) {
@@ -36,7 +33,6 @@ CallGraphPass::runOnModule(Module &m) {
         }
       }
   }
-
   return false;
 }
 
@@ -47,18 +43,18 @@ CallGraphPass::handleInstruction(CallSite cs) {
     return;
   }
 
-  // // Check whether the called function is directly invoked
-  // auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
-  // if (!called) {
-  //   return;
-  // }
+  // Check whether the called function is directly invoked
+  auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
+  if (!called) {
+    return;
+  }
 
-  // // Update the count for the particular call
-  // auto count = counts.find(called);
-  // if (counts.end() == count) {
-  //   count = counts.insert(std::make_pair(called, 0)).first;
-  // }
-  // ++count->second;
+  // Update the count for the particular call
+  auto count = callCounts.find(called);
+  if (callCounts.end() == count) {
+    count = callCounts.insert(std::make_pair(called, 0)).first;
+  }
+  ++count->second;
 }
 
 
@@ -69,7 +65,7 @@ WeightedCallGraphPass::runOnModule(Module &m) {
   // The results of the call graph pass can be extracted and used here.
   auto &cgPass = getAnalysis<CallGraphPass>();
 
-  // TODO Use the call graph to compute function weights.
+  callCountsW = cgPass.callCounts;
 
   return false;
 }
@@ -80,33 +76,11 @@ WeightedCallGraphPass::runOnModule(Module &m) {
 // its information.
 void
 WeightedCallGraphPass::print(raw_ostream &out, const Module *m) const {
-  auto &cgPass = getAnalysis<CallGraphPass>();
-
   // Print out all functions
-  for (/* Iterate through all functions */) {
-    out << /* function name */ << "," << /* Function Weight*/;
-
-    unsigned siteID = 0;
-    for (/* For each call site in the function */) {
-      out << "," << siteID << "," << /* file name */ << "," << /*Line Number*/;
-      ++siteID;
-    }
-    out << "\n";
-  }
-
-  // Separate functions and edges by a blank line
-  out << "\n";
-
-  // Print out all edges
-  for (/* Iterate through all functions */) {
-    unsigned siteID = 0;
-    for (/* For each call site in the function */) {
-      for (/* For each possible call target */) {
-        out << /* Caller Function Name */ << "," << siteID << ","
-            << /* Target function name*/ << "\n";
-      }
-      ++siteID;
-    }
+  for (auto &kvPair : callCountsW) {
+    auto *function = kvPair.first;
+    uint64_t count = kvPair.second;
+    out << function->getName() << "," << count << "\n";
   }
 }
 

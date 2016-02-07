@@ -82,3 +82,5 @@ demo/demobuild/CMakeFiles/3.2.2/CompilerIdC/CMakeCCompilerId.c
 demo/demobuild/CMakeFiles/feature_tests.c
 
 demo/demobuild/tools/callcounter/config.h
+
+project1/build/bin/callgrapher
