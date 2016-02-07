@@ -34,6 +34,7 @@ CallGraphPass::runOnModule(Module &m) {
            handleInstruction(CallSite(&i));
           }
         }
+        // functionMap.insert(std::make_pair(&f,calledFunctions));
       }
     }
   return false;
@@ -53,10 +54,18 @@ CallGraphPass::handleInstruction(CallSite cs) {
   }
 
   auto caller = cs.getCaller();
-  callSites.push_back(cs);
-  outs() << caller->getName() << " calls " << called->getName() << "\n";
-  functionMap.insert(std::make_pair(caller,callSites));
+  // outs() << caller->getName() << " calls " << called->getName() << "\n";
+  std::vector<llvm::Function*> calledFunctionVector;
 
+  auto parentFunction = functionMap.find(caller);
+  if (functionMap.end() == parentFunction) {
+      calledFunctionVector.push_back(called);
+      functionMap.insert(std::make_pair(caller,calledFunctionVector));
+  }
+  else {
+    parentFunction->second.push_back(called);
+  }
+ 
   // Update the count for the particular call
   auto count = callCounts.find(called);
   // if (callCounts.end() == count) {
@@ -98,17 +107,14 @@ void
 WeightedCallGraphPass::computeWeights() {
   auto &cgPass = getAnalysis<CallGraphPass>();
   auto tempMap = cgPass.functionMap;
-  std::vector<llvm::CallSite> calls;
+  std::vector<llvm::Function*> called;
   for (auto &kvPair: tempMap) {
     auto *function = kvPair.first;
-    // outs() << function->getName() << "-->";
-    calls = kvPair.second;
-    // outs() << "# of CallSites: " << calls.size() << "\n";
-    // for (auto &c : calls) {
-    //   auto called = dyn_cast<Function>(c.getCalledValue()->stripPointerCasts());
-    //   outs() << called->getName() << ",";
-    // }
-    // outs() << "\n";
+    outs() << function->getName() << "-->";
+    std::vector<llvm::Function*> calledFunctionVector = kvPair.second;
+    for (auto &c : calledFunctionVector) {
+      outs() << c->getName() << ",";
+    }
+    outs() << "\n";
   }
 }
-

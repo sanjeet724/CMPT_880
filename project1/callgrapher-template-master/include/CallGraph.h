@@ -18,9 +18,9 @@ struct CallGraphPass : public llvm::ModulePass {
 
   static char ID;
 
-  std::vector<llvm::CallSite> callSites;
+  // std::vector<llvm::Function*> calledFunctions;
   llvm::DenseMap<llvm::Function*, uint64_t> callCounts;
-  llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionMap;
+  llvm::DenseMap<llvm::Function*, std::vector<llvm::Function*>> functionMap;
 
 public:
   CallGraphPass()

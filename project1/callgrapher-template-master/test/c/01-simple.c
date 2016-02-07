@@ -6,7 +6,7 @@ void b() {}
 
 void c() {a();}
 
-void d() {}
+void d() {a();}
 
 int
 main(int argc, char **argv) {
