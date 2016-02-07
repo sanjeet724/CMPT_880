@@ -1,0 +1,5 @@
+1)Write code in Linux Box
+2)Sync code with Dropbox folder on Linux
+3)Sync code with Dropbox folder on Mac
+4)Commit changes on Mac through Git Desktop App
+4)Don't use version control on Linux.Just code and sync with dropbox

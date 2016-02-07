@@ -27,12 +27,15 @@ CallGraphPass::runOnModule(Module &m) {
   // and then use that call graph for computing and printing the weights in
   // WeightedCallGraph.
     for (auto &f : m) {
-      for (auto &bb : f) {
-        for (auto &i : bb) {
-          handleInstruction(CallSite(&i));
+      if (!f.getName().startswith("llvm")) {
+        callCounts.insert(std::make_pair(&f, 0));
+        for (auto &bb : f) {
+          for (auto &i : bb) {
+           handleInstruction(CallSite(&i));
+          }
         }
       }
-  }
+    }
   return false;
 }
 
@@ -45,7 +48,7 @@ CallGraphPass::handleInstruction(CallSite cs) {
 
   // Check whether the called function is directly invoked
   auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
-  if (!called) {
+  if (!called || called->getName().startswith("llvm")) {
     return;
   }
 
