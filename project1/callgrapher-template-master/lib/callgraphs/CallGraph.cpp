@@ -54,6 +54,7 @@ CallGraphPass::handleInstruction(CallSite cs) {
 
   auto caller = cs.getCaller();
   callSites.push_back(cs);
+  outs() << caller->getName() << " calls " << called->getName() << "\n";
   functionMap.insert(std::make_pair(caller,callSites));
 
   // Update the count for the particular call
@@ -97,9 +98,17 @@ void
 WeightedCallGraphPass::computeWeights() {
   auto &cgPass = getAnalysis<CallGraphPass>();
   auto tempMap = cgPass.functionMap;
+  std::vector<llvm::CallSite> calls;
   for (auto &kvPair: tempMap) {
     auto *function = kvPair.first;
-    outs() << "Caller is: " << function->getName() << "\n";
+    // outs() << function->getName() << "-->";
+    calls = kvPair.second;
+    // outs() << "# of CallSites: " << calls.size() << "\n";
+    // for (auto &c : calls) {
+    //   auto called = dyn_cast<Function>(c.getCalledValue()->stripPointerCasts());
+    //   outs() << called->getName() << ",";
+    // }
+    // outs() << "\n";
   }
 }
 
