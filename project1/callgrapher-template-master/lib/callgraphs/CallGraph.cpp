@@ -27,14 +27,10 @@ CallGraphPass::runOnModule(Module &m) {
   // and then use that call graph for computing and printing the weights in
   // WeightedCallGraph.
     for (auto &f : m) {
-      if (!f.getName().startswith("llvm")) {
-        callCounts.insert(std::make_pair(&f, 0));
-        for (auto &bb : f) {
-          for (auto &i : bb) {
-           handleInstruction(CallSite(&i));
-          }
+      for (auto &bb : f) {
+        for (auto &i : bb) {
+         handleInstruction(CallSite(&i));
         }
-        // functionMap.insert(std::make_pair(&f,calledFunctions));
       }
     }
   return false;
@@ -53,10 +49,10 @@ CallGraphPass::handleInstruction(CallSite cs) {
     return;
   }
 
-  
-  // Store each parent and child functions in a map (function* : vector of functions)
-  std::vector<llvm::Function*> calledFunctionVector;
   auto caller = cs.getCaller();
+  // Store each parent and child functions in a map (function* : vector of called functions)
+  /*
+  std::vector<llvm::Function*> calledFunctionVector;
   auto parentFunction = functionMap.find(caller);
   // outs() << caller->getName() << " calls " << called->getName() << "\n";
   if (functionMap.end() == parentFunction) {
@@ -67,8 +63,9 @@ CallGraphPass::handleInstruction(CallSite cs) {
   else {
     parentFunction->second.push_back(called);
   }
+  */
 
-  // Store each CallSite of a function
+  // Store each CallSite of a function in a map (function* : vector of callsites)
   std::vector<llvm::CallSite> functionCSVector;
   auto parentFunction2 =  functionCallSiteMap.find(caller);
   if (functionCallSiteMap.end() == parentFunction2) {
@@ -79,15 +76,15 @@ CallGraphPass::handleInstruction(CallSite cs) {
     parentFunction2->second.push_back(cs);
   }
 
- 
   // Update the count for the particular call
-  auto count = callCounts.find(called);
+  // auto count = callCounts.find(called);
   // if (callCounts.end() == count) {
   //   count = callCounts.insert(std::make_pair(called, 0)).first;
+  // } 
+  // else {
+  //   ++count->second;
   // }
-  ++count->second;
 }
-
 
 // For an analysis pass, runOnModule should perform the actual analysis and
 // compute the results. Any actual output, however, is produced separately.
@@ -95,10 +92,10 @@ bool
 WeightedCallGraphPass::runOnModule(Module &m) {
   // The results of the call graph pass can be extracted and used here.
   auto &cgPass = getAnalysis<CallGraphPass>();
-  callCountsW = cgPass.callCounts;
-  // computeWeights();
+  // callCountsW = cgPass.callCounts;
+  computeWeights();
+  functionMetaData();
   functionEdges();
-
   return false;
 }
 
@@ -115,22 +112,44 @@ WeightedCallGraphPass::print(raw_ostream &out, const Module *m) const {
     uint64_t count = kvPair.second;
     out << function->getName() << "," << count << "\n";
   }
+  out << "/n";
   */
 }
 
 void 
 WeightedCallGraphPass::computeWeights() {
   auto &cgPass = getAnalysis<CallGraphPass>();
-  auto tempMap = cgPass.functionMap;
-  for (auto &kvPair: tempMap) {
-    auto *function = kvPair.first;
-    outs() << function->getName() << "-->";
-    std::vector<llvm::Function*> calledFunctionVector = kvPair.second;
-    for (auto &c : calledFunctionVector) {
-      outs() << c->getName() << ",";
-    }
-    outs() << "\n";
+  auto tempMap = cgPass.functionCallSiteMap;
+  // initialize the weights to 0 for all functions
+  for (auto &kvPair:tempMap) {
+     auto *function = kvPair.first;
+     functionWeights.insert(std::make_pair(function,0));
   }
+  // iterate over the callsites of each function to calculate weights
+  for (auto &kvPair:tempMap) {
+    auto *function = kvPair.first;
+    std::vector<llvm::CallSite> calls = kvPair.second;
+    for (auto &c : calls) {
+      auto calledF = dyn_cast<Function>(c.getCalledValue());
+      auto functionW = functionWeights.find(calledF);
+      if (functionWeights.end() == functionW) {
+        functionWeights.insert(std::make_pair(calledF, 1));
+      }
+      else {
+        ++functionW->second;
+      }
+    }
+  }
+}
+
+void
+WeightedCallGraphPass::functionMetaData() {
+  for (auto &kvPair : functionWeights) {
+    auto *function = kvPair.first;
+    uint64_t count = kvPair.second;
+    outs() << function->getName() << "," << count << "\n";
+  }
+  outs() << "\n";
 }
 
 void
