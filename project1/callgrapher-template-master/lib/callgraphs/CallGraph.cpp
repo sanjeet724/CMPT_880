@@ -95,7 +95,9 @@ WeightedCallGraphPass::runOnModule(Module &m) {
   // callCountsW = cgPass.callCounts;
   computeWeights();
   functionMetaData();
+  outs() << "\n";
   functionEdges();
+  //printFunctionSiteMap();
   return false;
 }
 
@@ -144,12 +146,35 @@ WeightedCallGraphPass::computeWeights() {
 
 void
 WeightedCallGraphPass::functionMetaData() {
-  for (auto &kvPair : functionWeights) {
+  auto &cgPass = getAnalysis<CallGraphPass>();
+  auto tempMap = cgPass.functionCallSiteMap;
+  for (auto &kvPair:functionWeights) {
     auto *function = kvPair.first;
-    uint64_t count = kvPair.second;
-    outs() << function->getName() << "," << count << "\n";
+    uint64_t weight = kvPair.second;
+    outs() << function->getName() << "," << weight ;
+    checkFunctionCalls(function);
+    outs() << "\n";
   }
-  outs() << "\n";
+}
+
+void 
+WeightedCallGraphPass::checkFunctionCalls(Function *searchFunction) {
+  auto &cgPass = getAnalysis<CallGraphPass>();
+  auto tempMap = cgPass.functionCallSiteMap;
+  for (auto &kvPair:tempMap) {
+    auto *function = kvPair.first;
+    if (function == searchFunction) {
+      // This function has some callsites
+      std::vector<llvm::CallSite> calls = kvPair.second;
+      unsigned siteID = 0;
+      for (auto &c : calls) {
+        outs() << "," << siteID << "," 
+                      << c.getInstruction()->getDebugLoc()->getFilename() << ","
+                      << c.getInstruction()->getDebugLoc()->getLine();
+        ++siteID;
+      }
+    }
+  }
 }
 
 void
@@ -167,4 +192,17 @@ WeightedCallGraphPass::functionEdges() {
       ++siteID;
     }
   }
+}
+
+/*This function is just for sanity check*/
+void
+WeightedCallGraphPass::printFunctionSiteMap() {
+  outs() <<"\nPrinting the functions in FunctionSiteMap\n";
+  auto &cgPass = getAnalysis<CallGraphPass>();
+  auto tempMap = cgPass.functionCallSiteMap;
+  for (auto &kvPair:tempMap){
+    auto *function = kvPair.first;
+    outs() << function->getName() << "\n";
+  }
+  outs() <<"\n";
 }

@@ -64,6 +64,10 @@ struct WeightedCallGraphPass : public llvm::ModulePass {
   void functionMetaData();
 
   void functionEdges();
+
+  void printFunctionSiteMap();
+
+  void checkFunctionCalls(llvm::Function *searchFunction);
 };
 
 
