@@ -62,7 +62,7 @@ struct WeightedCallGraphPass : public llvm::ModulePass {
 
   void computeWeights();
 
-  void computeWeightsFromCallSite();
+  void functionEdges();
 };
 
 

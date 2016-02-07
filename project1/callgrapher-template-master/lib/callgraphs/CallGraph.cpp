@@ -97,7 +97,7 @@ WeightedCallGraphPass::runOnModule(Module &m) {
   auto &cgPass = getAnalysis<CallGraphPass>();
   callCountsW = cgPass.callCounts;
   // computeWeights();
-  computeWeightsFromCallSite();
+  functionEdges();
 
   return false;
 }
@@ -134,7 +134,7 @@ WeightedCallGraphPass::computeWeights() {
 }
 
 void
-WeightedCallGraphPass::computeWeightsFromCallSite() {
+WeightedCallGraphPass::functionEdges() {
   auto &cgPass = getAnalysis<CallGraphPass>();
   auto tempMap = cgPass.functionCallSiteMap;
   for (auto &kvPair:tempMap) {
