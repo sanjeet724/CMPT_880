@@ -119,7 +119,7 @@ WeightedCallGraphPass::functionMetaData() {
   }
 }
 
-llvm::StringRef getOnlyFileName(llvm::StringRef lf){
+static llvm::StringRef getOnlyFileName(llvm::StringRef lf){
   llvm::SmallVector<llvm::StringRef,16> splits;
   lf.split(splits, "/",-1, false);
   return splits.back();
