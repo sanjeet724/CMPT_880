@@ -82,15 +82,6 @@ WeightedCallGraphPass::runOnModule(Module &m) {
 // its information.
 void
 WeightedCallGraphPass::print(raw_ostream &out, const Module *m) const {
-  // Print out all functions
-  /*
-  for (auto &kvPair : callCountsW) {
-    auto *function = kvPair.first;
-    uint64_t count = kvPair.second;
-    out << function->getName() << "," << count << "\n";
-  }
-  out << "/n";
-  */
 }
 
 void 
@@ -128,6 +119,12 @@ WeightedCallGraphPass::functionMetaData() {
   }
 }
 
+llvm::StringRef getOnlyFileName(llvm::StringRef lf){
+  llvm::SmallVector<llvm::StringRef,16> splits;
+  lf.split(splits, "/",-1, false);
+  return splits.back();
+}
+
 void 
 WeightedCallGraphPass::checkFunctionCalls(Function *searchFunction) {
   for (auto &kvPair:tempMap) {
@@ -137,9 +134,13 @@ WeightedCallGraphPass::checkFunctionCalls(Function *searchFunction) {
       std::vector<llvm::CallSite> calls = kvPair.second;
       unsigned siteID = 0;
       for (auto &c : calls) {
+        llvm::StringRef longFileName = c.getInstruction()->getDebugLoc()->getFilename();
+        llvm::StringRef fileName = getOnlyFileName(longFileName);
+        getOnlyFileName(longFileName);
+        uint64_t lineNumber = c.getInstruction()->getDebugLoc()->getLine();
         outs() << "," << siteID << "," 
-                      << c.getInstruction()->getDebugLoc()->getFilename() << ","
-                      << c.getInstruction()->getDebugLoc()->getLine();
+                      << fileName << ","
+                      << lineNumber;
         ++siteID;
       }
     }
