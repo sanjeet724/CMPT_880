@@ -62,7 +62,7 @@ CallGraphPass::handleInstruction(CallSite cs) {
   auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
   if (!called || called->getName().startswith("llvm")) {
     if (!called) {
-      handleFunctionPointer(cs); // potential function pointer
+      handleFunctionPointer(cs); // function pointer
     }
     else {
       return;
@@ -131,10 +131,9 @@ WeightedCallGraphPass::runOnModule(Module &m) {
   tempMap = cgPass.functionCallSiteMap;
   weightedMatchedVF = cgPass.matchedVF;
   computeWeights();
-  // functionMetaData();
-  // printFunctionSiteMap();
+  functionMetaData();
   outs() << "\n";
-  //functionEdges();
+  functionEdges();
   return false;
 }
 
@@ -147,11 +146,15 @@ WeightedCallGraphPass::print(raw_ostream &out, const Module *m) const {
 }
 
 void 
-WeightedCallGraphPass::computeWeightsForVirtualFunction(CallSite cs) {
-  outs() << "--HERE---\n" ;
+WeightedCallGraphPass::computeWeightsForVirtualFunction() {
   for(auto &mf:weightedMatchedVF){
-    auto called = cs.getInstruction()->getParent()->getParent();
-    outs() << "-----" << called->getName();
+    auto functionW = functionWeights.find(mf);
+    if (functionWeights.end() == functionW) {
+      functionWeights.insert(std::make_pair(mf, 1));
+    }
+    else {
+      ++functionW->second;
+    }
   }
 }
 
@@ -169,7 +172,8 @@ WeightedCallGraphPass::computeWeights() {
     for (auto &c : calls) {
       auto calledF = dyn_cast<Function>(c.getCalledValue());
       if (!calledF) {
-        computeWeightsForVirtualFunction(c);
+        // handling a function pointer
+        computeWeightsForVirtualFunction();
       }
       else {
         auto functionW = functionWeights.find(calledF);
@@ -231,9 +235,19 @@ WeightedCallGraphPass::functionEdges() {
     std::vector<llvm::CallSite> calls = kvPair.second;
     for (auto &c : calls) {
       auto calledF = dyn_cast<Function>(c.getCalledValue());
-      outs() << function->getName() << "," << siteID << ","
-             << calledF->getName() << "\n" ;
-      ++siteID;
+      if (!calledF) {
+        // handling a function pointer
+        for(auto &mf:weightedMatchedVF) {
+          outs() << function->getName() << "," << siteID << ","
+                 << mf->getName() << "\n" ;
+          ++siteID;
+        }
+      }
+      else {
+          outs() << function->getName() << "," << siteID << ","
+                 << calledF->getName() << "\n" ;
+          ++siteID;
+      }
     }
   }
 }

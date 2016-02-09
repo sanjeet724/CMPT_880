@@ -64,7 +64,7 @@ struct WeightedCallGraphPass : public llvm::ModulePass {
 
   void computeWeights();
 
-  void computeWeightsForVirtualFunction(llvm::CallSite cs);
+  void computeWeightsForVirtualFunction();
 
   void functionMetaData();
 
