@@ -17,9 +17,9 @@ namespace callgraphs {
 struct CallGraphPass : public llvm::ModulePass {
 
   static char ID;
-  // llvm::DenseMap<llvm::Function*, uint64_t> callCounts;
-  // llvm::DenseMap<llvm::Function*, std::vector<llvm::Function*>> functionMap;
   llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionCallSiteMap;
+  std::vector<llvm::Function*> candidates;
+  std::vector<llvm::Function*> matchedVF;
 
 public:
   CallGraphPass()
@@ -34,6 +34,8 @@ public:
   bool runOnModule(llvm::Module &m) override;
 
   void handleInstruction(llvm::CallSite cs);
+
+  void handleFunctionPointer(llvm::CallSite cs);
 };
 
 

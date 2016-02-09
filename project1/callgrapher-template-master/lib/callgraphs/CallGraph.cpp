@@ -5,9 +5,11 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Casting.h"
 
 #include <deque>
 #include <iterator>
+#include <set>
 
 using namespace llvm;
 using namespace callgraphs;
@@ -26,6 +28,17 @@ CallGraphPass::runOnModule(Module &m) {
   // A good design might be to use the CallGraphPass to compute the call graph
   // and then use that call graph for computing and printing the weights in
   // WeightedCallGraph.
+
+  // Get the list of all potential virtual function candidates
+    for (auto &f : m) {
+        if (f.hasAddressTaken()){
+           candidates.push_back(&f);
+        }
+    }
+    // print out the cadidates - sanity check
+    // for (auto &c: candidates) {
+    //   outs() << c->getName() << "\n";
+    // }
     for (auto &f : m) {
       for (auto &bb : f) {
         for (auto &i : bb) {
@@ -46,19 +59,39 @@ CallGraphPass::handleInstruction(CallSite cs) {
   // Check whether the called function is directly invoked
   auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
   if (!called || called->getName().startswith("llvm")) {
-    return;
+    if (!called) {
+      handleFunctionPointer(cs); // potential function pointer
+    }
+  return;
   }
 
   // Store each CallSite of a function in a map (function* : vector of callsites)
   std::vector<llvm::CallSite> functionCSVector;
   auto caller = cs.getCaller();
-  auto parentFunction2 =  functionCallSiteMap.find(caller);
-  if (functionCallSiteMap.end() == parentFunction2) {
+  auto parentFunction =  functionCallSiteMap.find(caller);
+  if (functionCallSiteMap.end() == parentFunction) {
     functionCSVector.push_back(cs);
     functionCallSiteMap.insert(std::make_pair(caller,functionCSVector));
   }
   else {
-    parentFunction2->second.push_back(cs);
+    parentFunction->second.push_back(cs);
+  }
+}
+
+void
+CallGraphPass::handleFunctionPointer(CallSite cs) {
+  for (auto &f:candidates) {
+    // if the callsite and function have different # of arguments
+    if (cs.getNumArgOperands() != f->arg_size()){ 
+      return;
+    }
+    unsigned argCounter = 0;
+    for(auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
+      if (ab->getType() != cs.getArgument(argCounter)->getType()) {
+        return;
+      }
+    }
+    matchedVF.push_back(f);
   }
 }
 
