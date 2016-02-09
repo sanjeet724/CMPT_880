@@ -35,10 +35,12 @@ CallGraphPass::runOnModule(Module &m) {
            candidates.push_back(&f);
         }
     }
+
     // print out the cadidates - sanity check
     // for (auto &c: candidates) {
     //   outs() << c->getName() << "\n";
     // }
+
     for (auto &f : m) {
       for (auto &bb : f) {
         for (auto &i : bb) {
@@ -62,6 +64,9 @@ CallGraphPass::handleInstruction(CallSite cs) {
     if (!called) {
       handleFunctionPointer(cs); // potential function pointer
     }
+    else {
+      return;
+    }
   return;
   }
 
@@ -79,19 +84,41 @@ CallGraphPass::handleInstruction(CallSite cs) {
 }
 
 void
+CallGraphPass::createFunctionPointerMap(CallSite cs) {
+  // Store each CallSite of a function in a map (function* : vector of callsites)
+  std::vector<llvm::CallSite> functionCSVector;
+  auto caller = cs.getInstruction()->getParent()->getParent();
+  auto parentFunction =  functionCallSiteMap.find(caller);
+  if (functionCallSiteMap.end() == parentFunction) {
+    functionCSVector.push_back(cs);
+    functionCallSiteMap.insert(std::make_pair(caller,functionCSVector));
+  }
+  else {
+    parentFunction->second.push_back(cs);
+  }
+}
+
+void
 CallGraphPass::handleFunctionPointer(CallSite cs) {
   for (auto &f:candidates) {
-    // if the callsite and function have different # of arguments
-    if (cs.getNumArgOperands() != f->arg_size()){ 
-      return;
-    }
-    unsigned argCounter = 0;
-    for(auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
-      if (ab->getType() != cs.getArgument(argCounter)->getType()) {
-        return;
+    if (cs.getNumArgOperands() == f->arg_size()){ 
+      unsigned argCounter = 0;
+      for(auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
+        if (ab->getType() != cs.getArgument(argCounter)->getType()) {
+          return;
+        }
+        else {
+          ++argCounter;
+        }
+      }
+      if (argCounter == cs.getNumArgOperands()) {
+         matchedVF.push_back(f);
       }
     }
-    matchedVF.push_back(f);
+  }
+  if (matchedVF.size() > 0) {
+    // outs() << "Virtual Function Map Size: " << matchedVF.size() << "\n";
+    createFunctionPointerMap(cs);
   }
 }
 
@@ -102,10 +129,12 @@ WeightedCallGraphPass::runOnModule(Module &m) {
   // The results of the call graph pass can be extracted and used here.
   auto &cgPass = getAnalysis<CallGraphPass>();
   tempMap = cgPass.functionCallSiteMap;
+  weightedMatchedVF = cgPass.matchedVF;
   computeWeights();
-  functionMetaData();
+  // functionMetaData();
+  // printFunctionSiteMap();
   outs() << "\n";
-  functionEdges();
+  //functionEdges();
   return false;
 }
 
@@ -115,6 +144,15 @@ WeightedCallGraphPass::runOnModule(Module &m) {
 // its information.
 void
 WeightedCallGraphPass::print(raw_ostream &out, const Module *m) const {
+}
+
+void 
+WeightedCallGraphPass::computeWeightsForVirtualFunction(CallSite cs) {
+  outs() << "--HERE---\n" ;
+  for(auto &mf:weightedMatchedVF){
+    auto called = cs.getInstruction()->getParent()->getParent();
+    outs() << "-----" << called->getName();
+  }
 }
 
 void 
@@ -130,12 +168,17 @@ WeightedCallGraphPass::computeWeights() {
     std::vector<llvm::CallSite> calls = kvPair.second;
     for (auto &c : calls) {
       auto calledF = dyn_cast<Function>(c.getCalledValue());
-      auto functionW = functionWeights.find(calledF);
-      if (functionWeights.end() == functionW) {
-        functionWeights.insert(std::make_pair(calledF, 1));
+      if (!calledF) {
+        computeWeightsForVirtualFunction(c);
       }
       else {
-        ++functionW->second;
+        auto functionW = functionWeights.find(calledF);
+        if (functionWeights.end() == functionW) {
+          functionWeights.insert(std::make_pair(calledF, 1));
+        }
+        else {
+          ++functionW->second;
+        }
       }
     }
   }

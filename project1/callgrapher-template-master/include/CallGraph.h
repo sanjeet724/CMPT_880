@@ -36,6 +36,8 @@ public:
   void handleInstruction(llvm::CallSite cs);
 
   void handleFunctionPointer(llvm::CallSite cs);
+
+  void createFunctionPointerMap(llvm::CallSite cs);
 };
 
 
@@ -44,6 +46,7 @@ struct WeightedCallGraphPass : public llvm::ModulePass {
   static char ID;
   llvm::DenseMap<llvm::Function*, uint64_t> functionWeights;
   llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> tempMap;
+  std::vector<llvm::Function*> weightedMatchedVF;
 
   WeightedCallGraphPass()
     : ModulePass(ID)
@@ -60,6 +63,8 @@ struct WeightedCallGraphPass : public llvm::ModulePass {
   bool runOnModule(llvm::Module &m) override;
 
   void computeWeights();
+
+  void computeWeightsForVirtualFunction(llvm::CallSite cs);
 
   void functionMetaData();
 
