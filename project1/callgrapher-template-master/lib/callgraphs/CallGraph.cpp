@@ -37,14 +37,24 @@ CallGraphPass::runOnModule(Module &m) {
     }
 
     // print out the cadidates - sanity check
-    // for (auto &c: candidates) {
-    //   outs() << c->getName() << "\n";
-    // }
+    /*
+    for (auto &c: candidates) {
+      outs() << c->getName() << "\n";
+    }
+    */
 
     for (auto &f : m) {
-      for (auto &bb : f) {
-        for (auto &i : bb) {
-         handleInstruction(CallSite(&i));
+      if(!f.getName().startswith("llvm")) {
+        // check if function is already in the map
+        std::vector<llvm::CallSite> functionCSVector;
+        auto findFunction =  functionCallSiteMap.find(&f); 
+        if (functionCallSiteMap.end() == findFunction) {
+            functionCallSiteMap.insert(std::make_pair(&f,functionCSVector));
+        }
+        for (auto &bb : f) {
+          for (auto &i : bb) {
+           handleInstruction(CallSite(&i));
+          }
         }
       }
     }
@@ -117,7 +127,6 @@ CallGraphPass::handleFunctionPointer(CallSite cs) {
     }
   }
   if (matchedVF.size() > 0) {
-    // outs() << "Virtual Function Map Size: " << matchedVF.size() << "\n";
     createFunctionPointerMap(cs);
   }
 }
@@ -240,7 +249,6 @@ WeightedCallGraphPass::functionEdges() {
         for(auto &mf:weightedMatchedVF) {
           outs() << function->getName() << "," << siteID << ","
                  << mf->getName() << "\n" ;
-          ++siteID;
         }
       }
       else {
