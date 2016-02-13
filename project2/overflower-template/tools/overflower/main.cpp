@@ -19,6 +19,7 @@
 #include <string>
 
 #include "CallGraph.h"
+#include "DataFlowPolicy.h"
 
 
 using namespace std;
@@ -97,6 +98,7 @@ main (int argc, char **argv, const char **env) {
   PassManager pm;
   pm.add(new callgraphs::CallGraphPass);
 // TODO: Add your own pass to the PassManager here in order to run it.
+// pm.add(new dataflowpolicy::DataFlowPass);
 
 // TODO: Also change the line below to use your Pass in order to print
 //	out its results.

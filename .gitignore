@@ -113,3 +113,9 @@ project1/callgrapher-template-master/test/c/foo.c
 project1/Submission
 
 project2/overflower-template/test
+
+project2/build
+
+project2/filepolicy/FilePolicy.cpp
+
+project2/filepolicy/FilePolicy.h
