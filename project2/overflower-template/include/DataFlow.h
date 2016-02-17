@@ -34,7 +34,7 @@ public:
 
   bool runOnModule(llvm::Module &m) override;
 
-  void handleInstruction(llvm::CallSite cs);
+  void handleInstruction(llvm::Instruction *i);
 
   void handleFunction(llvm::Function *f, uint64_t cd);
 };

@@ -28,7 +28,8 @@ DataFlowPass::runOnModule(Module &m) {
     if (!f.getName().startswith("llvm")) {
       for (auto &bb : f) {
         for (auto &i : bb) {
-         handleInstruction(CallSite(&i));
+         //handleInstruction(CallSite(&i));
+         handleInstruction(&i);
         }
       }
     }
@@ -67,13 +68,21 @@ DataFlowPass::handleFunction(Function *f, uint64_t cd) {
 }
 
 void
-DataFlowPass::handleInstruction(CallSite cs) {
-
-  if (!cs.getInstruction()) {
-    return;
-  }
-  auto *i = cs.getInstruction();
-  if (isa<AllocaInst>(*i)) {
+DataFlowPass::handleInstruction(Instruction *i) {
+  // if (!cs.getInstruction()) {
+  //   return;
+  // }
+  // auto i = cs.getInstruction();
+  // auto i = dyn_cast<llvm::AllocaInst>(cs.getInstruction()->stripPointerCasts());
+  // if (i) {
+  //   outs() << "Alloca Found \n" ;
+  // }
+  // //auto i = cs.getInstruction();
+  // // if (i->isArrayAllocation()) {
+  // //    outs() << "Alloca Found \n" ;
+  // // }
+  
+  if (AllocaInst *allocInst = dyn_cast<AllocaInst>(i)) {
      outs() << "Alloca Found \n" ;
   }
 }
