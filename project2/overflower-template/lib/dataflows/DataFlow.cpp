@@ -23,6 +23,7 @@ RegisterPass<DataFlowPass> X{"dataflows",
 
 bool
 DataFlowPass::runOnModule(Module &m) {
+  // check for memory allocations of an array
   for (auto &f : m) {
     if (!f.getName().startswith("llvm")) {
       for (auto &bb : f) {
@@ -37,7 +38,7 @@ DataFlowPass::runOnModule(Module &m) {
   for (auto &f : m) {
     if (!f.getName().startswith("llvm")) {
       outs() << "In : " << f.getName();
-      handleFunction(&f, callDepth);
+      // handleFunction(&f, callDepth);
       outs() << '\n';
     }
   }
@@ -67,36 +68,14 @@ DataFlowPass::handleFunction(Function *f, uint64_t cd) {
 
 void
 DataFlowPass::handleInstruction(CallSite cs) {
-  /*
-  // Check whether the instruction is actually a call
+
   if (!cs.getInstruction()) {
     return;
   }
-
-  // Check whether the called function is directly invoked
-  auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
-  if (!called || called->getName().startswith("llvm")) {
-    if (!called) {
-      handleFunctionPointer(cs); // function pointer
-    }
-    else {
-      return;
-    }
-  return;
+  auto *i = cs.getInstruction();
+  if (isa<AllocaInst>(*i)) {
+     outs() << "Alloca Found \n" ;
   }
-
-  // Store each CallSite of a function in a map (function* : vector of callsites)
-  std::vector<llvm::CallSite> functionCSVector;
-  auto caller = cs.getCaller();
-  auto parentFunction =  functionCallSiteMap.find(caller);
-  if (functionCallSiteMap.end() == parentFunction) {
-    functionCSVector.push_back(cs);
-    functionCallSiteMap.insert(std::make_pair(caller,functionCSVector));
-  }
-  else {
-    parentFunction->second.push_back(cs);
-  }
-  */
 }
 
 
