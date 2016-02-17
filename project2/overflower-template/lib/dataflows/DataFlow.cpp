@@ -17,36 +17,52 @@ using namespace dataflows;
 
 char DataFlowPass::ID = 0;
 
-RegisterPass<DataFlowPass> X{"weightedcg",
-                                "construct a weighted call graph of a module"};
+RegisterPass<DataFlowPass> X{"dataflows",
+                                "detect data overflows"};
 
 
 bool
 DataFlowPass::runOnModule(Module &m) {
   for (auto &f : m) {
-      if(f.getName().equals("main")) {
-        handleFunction(&f);
-  }
-      //   // check if function is already in the map
-      //   std::vector<llvm::CallSite> functionCSVector;
-      //   auto findFunction =  functionCallSiteMap.find(&f); 
-      //   if (functionCallSiteMap.end() == findFunction) {
-      //       functionCallSiteMap.insert(std::make_pair(&f,functionCSVector));
-      //   }
-      //   for (auto &bb : f) {
-      //     for (auto &i : bb) {
-      //      handleInstruction(CallSite(&i));
-      //     }
-      //   }
-      // }
+    if (!f.getName().startswith("llvm")) {
+      for (auto &bb : f) {
+        for (auto &i : bb) {
+         handleInstruction(CallSite(&i));
+        }
+      }
     }
+  }
+
+  // check the data flow in function calls upto a depth of 2
+  for (auto &f : m) {
+    if (!f.getName().startswith("llvm")) {
+      outs() << "In : " << f.getName();
+      handleFunction(&f, callDepth);
+      outs() << '\n';
+    }
+  }
+
   return false;
 }
 
 void 
-DataFlowPass::handleFunction(Function *f) {
-  outs() << "In Main\n" ;
-
+DataFlowPass::handleFunction(Function *f, uint64_t cd) {
+  for(auto &bb : *f) {
+    for (auto &i : bb) {
+        auto cs = CallSite(&i);
+        if(cs.isCall()){
+         if (!cs.getCalledFunction()->getName().startswith("llvm")){
+             cd++;
+             outs() << " calling : " << cs.getCalledFunction()->getName() << "\n";
+             handleFunction(cs.getCalledFunction(), callDepth);
+             cd--;
+         }
+        }
+        else {
+          // To do
+        }
+    }
+  }
 }
 
 void

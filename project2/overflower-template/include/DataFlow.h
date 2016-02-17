@@ -20,6 +20,7 @@ struct DataFlowPass : public llvm::ModulePass {
   llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionCallSiteMap;
   std::vector<llvm::Function*> candidates;
   std::vector<llvm::Function*> matchedVF;
+  uint64_t callDepth = 0;
 
 public:
   DataFlowPass()
@@ -35,7 +36,7 @@ public:
 
   void handleInstruction(llvm::CallSite cs);
 
-  void handleFunction(llvm::Function *f);
+  void handleFunction(llvm::Function *f, uint64_t cd);
 };
 
 }
