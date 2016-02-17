@@ -1,6 +1,6 @@
 
-#ifndef CALLGRAPH_H
-#define CALLGRAPH_H
+#ifndef DATAFLOW_H
+#define DATAFLOW_H
 
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
@@ -11,10 +11,10 @@
 #include <unordered_set>
 #include <deque>
 
-namespace callgraphs {
+namespace dataflows {
 
 
-struct CallGraphPass : public llvm::ModulePass {
+struct DataFlowPass : public llvm::ModulePass {
 
   static char ID;
   llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionCallSiteMap;
@@ -22,7 +22,7 @@ struct CallGraphPass : public llvm::ModulePass {
   std::vector<llvm::Function*> matchedVF;
 
 public:
-  CallGraphPass()
+  DataFlowPass()
     : ModulePass(ID)
       { }
 

@@ -1,5 +1,5 @@
 
-#include "CallGraph.h"
+#include "DataFlow.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
@@ -12,17 +12,17 @@
 #include <set>
 
 using namespace llvm;
-using namespace callgraphs;
+using namespace dataflows;
 
 
-char CallGraphPass::ID = 0;
+char DataFlowPass::ID = 0;
 
-RegisterPass<CallGraphPass> X{"weightedcg",
+RegisterPass<DataFlowPass> X{"weightedcg",
                                 "construct a weighted call graph of a module"};
 
 
 bool
-CallGraphPass::runOnModule(Module &m) {
+DataFlowPass::runOnModule(Module &m) {
   for (auto &f : m) {
       if(f.getName().equals("main")) {
         handleFunction(&f);
@@ -44,13 +44,13 @@ CallGraphPass::runOnModule(Module &m) {
 }
 
 void 
-CallGraphPass::handleFunction(Function *f) {
+DataFlowPass::handleFunction(Function *f) {
   outs() << "In Main\n" ;
 
 }
 
 void
-CallGraphPass::handleInstruction(CallSite cs) {
+DataFlowPass::handleInstruction(CallSite cs) {
   /*
   // Check whether the instruction is actually a call
   if (!cs.getInstruction()) {
