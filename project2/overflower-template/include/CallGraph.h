@@ -26,55 +26,17 @@ public:
     : ModulePass(ID)
       { }
 
-  void
-  getAnalysisUsage(llvm::AnalysisUsage &au) const override {
-    au.setPreservesAll();
-  }
+  // void
+  // getAnalysisUsage(llvm::AnalysisUsage &au) const override {
+  //   au.setPreservesAll();
+  // }
 
   bool runOnModule(llvm::Module &m) override;
 
   void handleInstruction(llvm::CallSite cs);
 
-  void handleFunctionPointer(llvm::CallSite cs);
-
-  void createFunctionPointerMap(llvm::CallSite cs);
+  void handleFunction(llvm::Function *f);
 };
-
-
-struct WeightedCallGraphPass : public llvm::ModulePass {
-
-  static char ID;
-  llvm::DenseMap<llvm::Function*, uint64_t> functionWeights;
-  llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> tempMap;
-  std::vector<llvm::Function*> weightedMatchedVF;
-
-  WeightedCallGraphPass()
-    : ModulePass(ID)
-      { }
-
-  void
-  getAnalysisUsage(llvm::AnalysisUsage &au) const override {
-    au.setPreservesAll();
-    au.addRequired<CallGraphPass>();
-  }
-
-  void print(llvm::raw_ostream &out, const llvm::Module *m) const override;
-
-  bool runOnModule(llvm::Module &m) override;
-
-  void computeWeights();
-
-  void computeWeightsForVirtualFunction();
-
-  void functionMetaData();
-
-  void functionEdges();
-
-  void checkFunctionCalls(llvm::Function *searchFunction);
-
-  void printFunctionSiteMap();
-};
-
 
 }
 
