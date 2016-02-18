@@ -17,9 +17,7 @@ namespace dataflows {
 struct DataFlowPass : public llvm::ModulePass {
 
   static char ID;
-  llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionCallSiteMap;
-  std::vector<llvm::Function*> candidates;
-  std::vector<llvm::Function*> matchedVF;
+  llvm::DenseMap<llvm::Function*, std::vector<std::unordered_map<llvm::Instruction *, signed>>> functionAllocationMap;
   uint64_t callDepth = 0;
 
 public:

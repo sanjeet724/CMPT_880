@@ -38,7 +38,7 @@ DataFlowPass::runOnModule(Module &m) {
   // check the data flow in function calls upto a depth of 2
   for (auto &f : m) {
     if (!f.getName().startswith("llvm")) {
-      outs() << "In : " << f.getName();
+      // outs() << "In : " << f.getName();
       // handleFunction(&f, callDepth);
       outs() << '\n';
     }
@@ -69,22 +69,17 @@ DataFlowPass::handleFunction(Function *f, uint64_t cd) {
 
 void
 DataFlowPass::handleInstruction(Instruction *i) {
-  // if (!cs.getInstruction()) {
-  //   return;
-  // }
-  // auto i = cs.getInstruction();
-  // auto i = dyn_cast<llvm::AllocaInst>(cs.getInstruction()->stripPointerCasts());
-  // if (i) {
-  //   outs() << "Alloca Found \n" ;
-  // }
-  // //auto i = cs.getInstruction();
-  // // if (i->isArrayAllocation()) {
-  // //    outs() << "Alloca Found \n" ;
-  // // }
-  
-  if (AllocaInst *allocInst = dyn_cast<AllocaInst>(i)) {
-     outs() << "Alloca Found \n" ;
+  std::unordered_map<llvm::Instruction*, signed> arrayMap;
+  AllocaInst *allocaInst = dyn_cast<AllocaInst>(i);
+  if (!allocaInst){
+    return;
   }
+  auto *p = allocaInst->getType();
+  ArrayType *a = cast<ArrayType>(p->getElementType()); 
+  outs() << "ALlocaInst Name: " << allocaInst->getName() << "\n";
+  outs() << a->getNumElements() << "\n";
+  outs() << "Array Size: " << *allocaInst->getAllocatedType();
+  arrayMap[i] = a->getNumElements();
 }
 
 
