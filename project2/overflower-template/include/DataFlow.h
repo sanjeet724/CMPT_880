@@ -17,7 +17,9 @@ namespace dataflows {
 struct DataFlowPass : public llvm::ModulePass {
 
   static char ID;
-  llvm::DenseMap<llvm::Function*, std::vector<std::unordered_map<llvm::Instruction *, signed>>> functionAllocationMap;
+  llvm::DenseMap<llvm::Function*, signed> functionBufferMap;
+  llvm::DenseMap<llvm::Function*, llvm::Instruction*> loadMap;
+  llvm::DenseMap<llvm::Function*, llvm::Instruction*> storeMap;
   uint64_t callDepth = 0;
 
 public:
@@ -33,6 +35,14 @@ public:
   bool runOnModule(llvm::Module &m) override;
 
   void handleInstruction(llvm::Instruction *i);
+
+  void checkAllocation(llvm::Instruction *i);
+
+  void checkLoad(llvm::Instruction *i);
+
+  void checkAlias(llvm::Instruction *i);
+
+  // void checkStore(llvm::Instruction *i);
 
   void handleFunction(llvm::Function *f, uint64_t cd);
 };

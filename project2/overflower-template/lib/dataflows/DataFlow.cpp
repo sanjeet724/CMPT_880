@@ -28,8 +28,10 @@ DataFlowPass::runOnModule(Module &m) {
     if (!f.getName().startswith("llvm")) {
       for (auto &bb : f) {
         for (auto &i : bb) {
-         //handleInstruction(CallSite(&i));
-         handleInstruction(&i);
+         checkAllocation(&i);
+         checkLoad(&i);
+         //checkStore(&i);
+         checkAlias(&i);
         }
       }
     }
@@ -68,19 +70,57 @@ DataFlowPass::handleFunction(Function *f, uint64_t cd) {
 }
 
 void
-DataFlowPass::handleInstruction(Instruction *i) {
-  std::unordered_map<llvm::Instruction*, signed> arrayMap;
+DataFlowPass::checkAllocation(Instruction *i) {
   AllocaInst *allocaInst = dyn_cast<AllocaInst>(i);
   if (!allocaInst){
     return;
   }
+  outs() << "Allocation Found \n";
   auto *p = allocaInst->getType();
   ArrayType *a = cast<ArrayType>(p->getElementType()); 
-  outs() << "ALlocaInst Name: " << allocaInst->getName() << "\n";
-  outs() << a->getNumElements() << "\n";
-  outs() << "Array Size: " << *allocaInst->getAllocatedType();
-  arrayMap[i] = a->getNumElements();
+  // outs() << "ALlocaInst Name: " << allocaInst->getName() << "\n";
+  // outs() << a->getNumElements() << "\n";
+  // outs() << "Array Size: " << *allocaInst->getAllocatedType();
+  // put the buffer size in a map
+  functionBufferMap.insert(std::make_pair(i->getParent()->getParent(),a->getNumElements()));
 }
+
+void
+DataFlowPass::checkLoad(Instruction *i) {
+  LoadInst *lInst = dyn_cast<LoadInst>(i);
+  if(!lInst) {
+    return;
+  }
+  outs() << "Load Found \n";
+  outs() << "Load Pointer operand: " << *lInst->getPointerOperand() << "\n";
+  loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
+
+}
+
+void
+DataFlowPass::checkAlias(Instruction *i) {
+  GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(i);
+  if (!gep) {
+    return;
+  }
+  outs() << "GEP Found\n";
+  outs() << "GEP Pointer operand: " << *gep->getPointerOperand() << "\n";
+  outs() << "GEP Pointer operand Type: " << *gep->getPointerOperandType() << "\n";
+  outs() << "GEP #of Indices: " << gep->getNumIndices() << "\n";
+}
+
+/*
+void
+DataFlowPass::checkStore(Instruction *i){
+  StoreInst *sInst = dyn_cast<StoreInst>(i);
+  if(!sInst) {
+    return;
+  }
+  storeMap.insert(std::make_pair(i->getParent()->getParent(),sInst));
+  outs() << "Store Found \n";
+}
+*/
+
 
 
 
