@@ -93,6 +93,7 @@ DataFlowPass::checkLoad(Instruction *i) {
   }
   outs() << "Load Found \n";
   outs() << "Load Pointer operand: " << *lInst->getPointerOperand() << "\n";
+  outs() << "Load address space: " << lInst->getPointerAddressSpace() << "\n";
   loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
 
 }
@@ -107,6 +108,19 @@ DataFlowPass::checkAlias(Instruction *i) {
   outs() << "GEP Pointer operand: " << *gep->getPointerOperand() << "\n";
   outs() << "GEP Pointer operand Type: " << *gep->getPointerOperandType() << "\n";
   outs() << "GEP #of Indices: " << gep->getNumIndices() << "\n";
+  outs() << "GEP address space: " << gep->getAddressSpace() <<"\n";
+
+  // gep->dump();
+  // Value* firstOperand = gep->getOperand(0);
+  // Type* type = firstOperand->getType();
+  // // Figure out whether the first operand points to an array
+  // if (PointerType *pointerType = dyn_cast<PointerType>(type)) {
+  //     Type* elementType = pointerType->getElementType();
+  //     outs() << "The element type is: " << *elementType << "\n";
+  //     if (elementType->isArrayTy()) {
+  //         outs() << ".. points to an array!\n";
+  //     }
+  // }
 }
 
 /*
