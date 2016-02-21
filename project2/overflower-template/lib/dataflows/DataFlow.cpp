@@ -7,6 +7,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 
 #include <deque>
 #include <iterator>
@@ -22,9 +23,18 @@ RegisterPass<DataFlowPass> X{"dataflows",
                               "detect data overflows"};
 
 
+bool 
+DataFlowPass::doInitialization(Module &m) {
+  const DataLayout &dl = m.getDataLayout();
+  dataL = &dl;
+  return false;
+}
+
+
 bool
 DataFlowPass::runOnModule(Module &m) {
   // check for memory allocations of an array
+
   for (auto &f : m) {
     if (!f.getName().startswith("llvm")) {
       for (auto &bb : f) {
@@ -80,12 +90,18 @@ DataFlowPass::checkAllocation(Instruction *i) {
   if (!a) {
     return;
   }
-  // printAllocaInfo(allocaInst);
+ //  printAllocaInfo(allocaInst);
   allocated = i;
+  // outs() << "Array Type is: " << *a->getElementType() << "\n";
+  allocatedTypeSize = dataL->getTypeStoreSize(a->getElementType());
+  // outs() << "allocatedTypeSize is: " << allocatedTypeSize << "\n";
   bufferSize = a->getNumElements();
+  bufferSizeByte = bufferSize * allocatedTypeSize;
+  outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
   functionBufferMap.insert(std::make_pair(allocated,bufferSize));
 }
 
+// helper functions just for diagnostic purposes
 void 
 DataFlowPass::printAllocaInfo(AllocaInst *alloca) {
   outs() << "---Printing AllocaInst Info---\n";
@@ -133,15 +149,16 @@ DataFlowPass::checkLoad(Instruction *i) {
       recurseOnValue(v);
       return;
     }
-    signed accessedSize = indexGEP->getLimitedValue();
-    if (accessedSize < 0 || accessedSize > bufferSize-1) {
+    signed accessedIndex = indexGEP->getLimitedValue();
+    if (accessedIndex < 0 || accessedIndex > bufferSize-1) {
       outs() << "Invalid Memory Access";
       return;
     }
-    outs() << "Valid Memory Access"; 
+    signed accesedSize = (accessedIndex)*allocatedTypeSize;
+    outs() << "Memory Access Offset: " << accesedSize << "\n" ;
     return;
   }
-  outs() << "Invalid Alias Analysis: " << ar << "\n";
+  outs() << "Invalid Alias Analysis: " << ar ;
   return;
 }
 
@@ -155,38 +172,21 @@ DataFlowPass::recurseOnValue(Value *v){
       return;
     }
     // base case
-    signed accessedSize = index->getLimitedValue();
-    if (accessedSize < 0 || accessedSize > bufferSize-1) {
+    signed accessedIndex = index->getLimitedValue();
+    if (accessedIndex < 0 || accessedIndex > bufferSize-1) {
       outs() << "Invalid Memory Access";
       return;
     }
-    // outs() << "Accessed Index: " << accessedSize << "\n";
-    outs() << "Valid Memory Access\n"; 
+    signed accesedSize = (accessedIndex)*allocatedTypeSize;
+    outs() << "Memory Access Offset: " << accesedSize << "\n" ;
     return;
   }
-  // base case 2 - its a phi node
-  PHINode *phi = dyn_cast<PHINode>(i);
-  if (phi) {
-    for (signed i = 0; i < phi->getNumIncomingValues(); i++ ){
-      recurseOnValue(phi->getOperand(i));
-    }
-    return;
+  signed numOfOperands = i->getNumOperands();
+  for (signed op = 0; op < numOfOperands; op++) {
+    recurseOnValue(i->getOperand(op));
   }
-  // outs() << "next operand is: " << *i->getOperand(0) << "\n";
-  recurseOnValue(i->getOperand(0));
+  return;
 }
-
-/*
-void
-DataFlowPass::checkStore(Instruction *i){
-  StoreInst *sInst = dyn_cast<StoreInst>(i);
-  if(!sInst) {
-    return;
-  }
-  storeMap.insert(std::make_pair(i->getParent()->getParent(),sInst));
-  outs() << "Store Found \n";
-}
-*/
 
 
 

@@ -19,9 +19,11 @@ namespace dataflows {
 struct DataFlowPass : public llvm::ModulePass {
 
   static char ID;
-  //llvm::Instruction* allocated;
+  const llvm::DataLayout *dataL;
   llvm::Instruction * allocated;
+  uint64_t allocatedTypeSize;
   signed bufferSize;
+  signed bufferSizeByte;
   llvm::DenseMap<llvm::Instruction*, signed> functionBufferMap;
   llvm::DenseMap<llvm::Function*, llvm::Instruction*> loadMap;
   llvm::DenseMap<llvm::Function*, llvm::Instruction*> storeMap;
@@ -38,6 +40,8 @@ public:
     au.setPreservesAll();
   }
 
+  bool doInitialization(llvm::Module &m) override;
+
   bool runOnModule(llvm::Module &m) override;
 
   void handleInstruction(llvm::Instruction *i);
@@ -51,8 +55,6 @@ public:
   void printGEPInfo(llvm::GetElementPtrInst *gep);
 
   void printAllocaInfo(llvm::AllocaInst *alloca);
-
-  // void checkStore(llvm::Instruction *i);
 
   void handleFunction(llvm::Function *f, uint64_t cd);
 };
