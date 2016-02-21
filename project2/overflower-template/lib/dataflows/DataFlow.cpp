@@ -127,13 +127,16 @@ DataFlowPass::printGEPInfo(GetElementPtrInst *gep) {
 
 void
 DataFlowPass::checkLoad(Instruction *i) {
-  LoadInst *lInst = dyn_cast<LoadInst>(i);
-  if(!lInst) {
+  // LoadInst *lInst = dyn_cast<LoadInst>(i);
+  // if(!lInst) {
+  //   return;
+  // }
+  if(!i) {
     return;
   }
-  loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
+  // loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
   // get the GEP from the load instruction
-  GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(lInst->getPointerOperand());
+  GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(i);
   if (!gep) {
     return;
   }
@@ -150,11 +153,11 @@ DataFlowPass::checkLoad(Instruction *i) {
       return;
     }
     signed accessedIndex = indexGEP->getLimitedValue();
+    signed accesedSize = (accessedIndex)*allocatedTypeSize;
     if (accessedIndex < 0 || accessedIndex > bufferSize-1) {
-      outs() << "Invalid Memory Access";
+      outs() << "Invalid Memory Access: " << accesedSize << "\n";
       return;
     }
-    signed accesedSize = (accessedIndex)*allocatedTypeSize;
     outs() << "Memory Access Offset: " << accesedSize << "\n" ;
     return;
   }
@@ -168,19 +171,20 @@ DataFlowPass::recurseOnValue(Value *v){
   if (!i){
     ConstantInt *index = dyn_cast<ConstantInt>(v);
     if (!index) {
-      outs() << "Unknown Memory Address in Recurse";
+      outs() << "Unknown Memory Address in Recurse \n";
       return;
     }
     // base case
     signed accessedIndex = index->getLimitedValue();
+    signed accesedSize = (accessedIndex)*allocatedTypeSize;
     if (accessedIndex < 0 || accessedIndex > bufferSize-1) {
-      outs() << "Invalid Memory Access";
+      outs() << "Invalid Memory Access: " << accesedSize << "\n";
       return;
     }
-    signed accesedSize = (accessedIndex)*allocatedTypeSize;
     outs() << "Memory Access Offset: " << accesedSize << "\n" ;
     return;
   }
+  // outs() << "i is : " << *i << "\n";
   signed numOfOperands = i->getNumOperands();
   for (signed op = 0; op < numOfOperands; op++) {
     recurseOnValue(i->getOperand(op));
