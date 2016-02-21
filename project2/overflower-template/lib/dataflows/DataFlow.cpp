@@ -129,17 +129,18 @@ DataFlowPass::checkLoad(Instruction *i) {
     // gep->getOperand(2) gives the index 
     if (ConstantInt *indexGEP = dyn_cast<ConstantInt>(gep->getOperand(2))) {
         signed accessedSize = indexGEP->getLimitedValue();
-        outs() << accessedSize << "\n";
         if (accessedSize < 0 || accessedSize > bufferSize-1) {
           outs() << "Invalid Memory Access";
           return;
         }
         outs() << "Valid Memory Access"; 
-      }
-  else {
-    outs() << "Invalid Alias Analysis: " << ar << "\n";
+        return;
+    }
+    outs() << "Unknown Memory Access";
+    return;
   }
-  }
+  outs() << "Invalid Alias Analysis: " << ar << "\n";
+  return;
 }
 
 
