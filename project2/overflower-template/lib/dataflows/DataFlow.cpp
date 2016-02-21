@@ -131,7 +131,6 @@ DataFlowPass::checkLoad(Instruction *i) {
     if (!indexGEP) {
       auto *v = gep->getOperand(2);
       recurseOnValue(v);
-      // outs() << "Unknown Memory Access";
       return;
     }
     signed accessedSize = indexGEP->getLimitedValue();
