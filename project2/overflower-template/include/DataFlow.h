@@ -7,6 +7,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>
@@ -17,6 +19,8 @@ namespace dataflows {
 struct DataFlowPass : public llvm::ModulePass {
 
   static char ID;
+  //llvm::Instruction* allocated;
+  llvm::Instruction * allocated;
   llvm::DenseMap<llvm::Function*, signed> functionBufferMap;
   llvm::DenseMap<llvm::Function*, llvm::Instruction*> loadMap;
   llvm::DenseMap<llvm::Function*, llvm::Instruction*> storeMap;
@@ -27,10 +31,11 @@ public:
     : ModulePass(ID)
       { }
 
-  // void
-  // getAnalysisUsage(llvm::AnalysisUsage &au) const override {
-  //   au.setPreservesAll();
-  // }
+  void
+  getAnalysisUsage(llvm::AnalysisUsage &au) const override {
+    au.addRequired<llvm::AliasAnalysis>();
+    au.setPreservesAll();
+  }
 
   bool runOnModule(llvm::Module &m) override;
 
@@ -40,7 +45,9 @@ public:
 
   void checkLoad(llvm::Instruction *i);
 
-  void checkAlias(llvm::Instruction *i);
+  void printGEPInfo(llvm::GetElementPtrInst *gep);
+
+  void printAllocaInfo(llvm::AllocaInst *alloca);
 
   // void checkStore(llvm::Instruction *i);
 

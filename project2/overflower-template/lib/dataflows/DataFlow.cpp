@@ -18,7 +18,7 @@ using namespace dataflows;
 char DataFlowPass::ID = 0;
 
 RegisterPass<DataFlowPass> X{"dataflows",
-                                "detect data overflows"};
+                              "detect data overflows"};
 
 
 bool
@@ -29,9 +29,9 @@ DataFlowPass::runOnModule(Module &m) {
       for (auto &bb : f) {
         for (auto &i : bb) {
          checkAllocation(&i);
+         //getGEP(&i);
          checkLoad(&i);
          //checkStore(&i);
-         checkAlias(&i);
         }
       }
     }
@@ -75,15 +75,40 @@ DataFlowPass::checkAllocation(Instruction *i) {
   if (!allocaInst){
     return;
   }
-  outs() << "Allocation Found \n";
   auto *p = allocaInst->getType();
-  ArrayType *a = cast<ArrayType>(p->getElementType()); 
-  // outs() << "ALlocaInst Name: " << allocaInst->getName() << "\n";
-  // outs() << a->getNumElements() << "\n";
-  // outs() << "Array Size: " << *allocaInst->getAllocatedType();
+  // we need it only if the allocation is an array
+  ArrayType *a = dyn_cast<ArrayType>(p->getElementType()); 
+  if (!a) {
+    return;
+  }
+  // printAllocaInfo(allocaInst);
   // put the buffer size in a map
+  allocated = i;
   functionBufferMap.insert(std::make_pair(i->getParent()->getParent(),a->getNumElements()));
 }
+
+void 
+DataFlowPass::printAllocaInfo(AllocaInst *alloca) {
+  outs() << "---Printing AllocaInst Info---\n";
+  outs() << "AllocaInst Name: " << alloca->getName() << "\n";
+  outs() << "Allocated Type: " << *alloca->getAllocatedType() << "\n";
+  auto *p = alloca->getType();
+  outs() << "allocaInst->getType(): " << *p << "\n";
+  outs() << "Element Type of allocInst: " << *p->getElementType() << "\n";
+  ArrayType *a = dyn_cast<ArrayType>(p->getElementType()); 
+  outs() << "Allocated Array is:  " << *a << "\n";
+  outs() << "# Elements in a: " << a->getNumElements() << "\n";
+}
+
+void
+DataFlowPass::printGEPInfo(GetElementPtrInst *gep) {
+  outs() << "---Printing GEP Info---\n";
+  outs() << "GEP: " << *gep << "\n" ;
+  outs() << "GEP's pointer operand: " << *gep->getPointerOperand() << "\n" ;
+  outs() << "GEP #of Operands: " << gep->getNumOperands() << "\n";
+  outs() << "GEP[2]: " << *gep->getOperand(2) << "\n";
+}
+
 
 void
 DataFlowPass::checkLoad(Instruction *i) {
@@ -91,37 +116,29 @@ DataFlowPass::checkLoad(Instruction *i) {
   if(!lInst) {
     return;
   }
-  outs() << "Load Found \n";
-  outs() << "Load Pointer operand: " << *lInst->getPointerOperand() << "\n";
-  outs() << "Load address space: " << lInst->getPointerAddressSpace() << "\n";
+  // outs() << "Load Instruction Found: " << lInst << "\n";
+  // outs() << "Load Pointer operand: " << *lInst->getPointerOperand() << "\n";
+  // outs() << "Load address space: " << lInst->getPointerAddressSpace() << "\n";
   loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
-
-}
-
-void
-DataFlowPass::checkAlias(Instruction *i) {
-  GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(i);
+  // get the GEP from the load instruction
+  GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(lInst->getPointerOperand());
   if (!gep) {
     return;
   }
-  outs() << "GEP Found\n";
-  outs() << "GEP Pointer operand: " << *gep->getPointerOperand() << "\n";
-  outs() << "GEP Pointer operand Type: " << *gep->getPointerOperandType() << "\n";
-  outs() << "GEP #of Indices: " << gep->getNumIndices() << "\n";
-  outs() << "GEP address space: " << gep->getAddressSpace() <<"\n";
+  printGEPInfo(gep);
+  outs() << "Alloca: " << *allocated << "\n";
+  AliasAnalysis &AA = getAnalysis<AliasAnalysis>();
+  AliasResult ar = AA.alias(allocated,gep->getPointerOperand());
+  if ( ar==3 ){
+    outs() << "Must Alias\n" ;
+  }
 
-  // gep->dump();
-  // Value* firstOperand = gep->getOperand(0);
-  // Type* type = firstOperand->getType();
-  // // Figure out whether the first operand points to an array
-  // if (PointerType *pointerType = dyn_cast<PointerType>(type)) {
-  //     Type* elementType = pointerType->getElementType();
-  //     outs() << "The element type is: " << *elementType << "\n";
-  //     if (elementType->isArrayTy()) {
-  //         outs() << ".. points to an array!\n";
-  //     }
-  // }
+  for(auto ab=gep->idx_begin(),ae=gep->idx_end();ab != ae; ab++) {
+    outs() << "ab is: " << ab << "\n";
+  }
+  
 }
+
 
 /*
 void

@@ -14,6 +14,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/Passes.h"
 
 #include <memory>
 #include <string>
@@ -95,9 +96,9 @@ main (int argc, char **argv, const char **env) {
 
   // Build up all of the passes that we want to run on the module.
   PassManager pm;
+  pm.add(createBasicAliasAnalysisPass());
   pm.add(new dataflows::DataFlowPass);
 // TODO: Add your own pass to the PassManager here in order to run it.
-// pm.add(new dataflowpolicy::DataFlowPass);
 
 // TODO: Also change the line below to use your Pass in order to print
 //	out its results.
