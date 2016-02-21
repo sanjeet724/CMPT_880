@@ -160,18 +160,21 @@ DataFlowPass::recurseOnValue(Value *v){
       outs() << "Invalid Memory Access";
       return;
     }
-    outs() << "Accessed Index: " << accessedSize << "\n";
-    outs() << "Valid Memory Access"; 
+    // outs() << "Accessed Index: " << accessedSize << "\n";
+    outs() << "Valid Memory Access\n"; 
     return;
   }
+  // base case 2 - its a phi node
   PHINode *phi = dyn_cast<PHINode>(i);
-  if (!phi){
-    outs() << "next operand is: " << *i->getOperand(0) << "\n";
-    recurseOnValue(i->getOperand(0));
+  if (phi) {
+    for (signed i = 0; i < phi->getNumIncomingValues(); i++ ){
+      recurseOnValue(phi->getOperand(i));
+    }
+    return;
   }
-  // handle PHI Node
+  // outs() << "next operand is: " << *i->getOperand(0) << "\n";
+  recurseOnValue(i->getOperand(0));
 }
-
 
 /*
 void
