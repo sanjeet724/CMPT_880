@@ -124,23 +124,53 @@ DataFlowPass::checkLoad(Instruction *i) {
   // printGEPInfo(gep);
   AliasAnalysis &AA = getAnalysis<AliasAnalysis>();
   AliasResult ar = AA.alias(allocated,gep->getPointerOperand());
-  if ( ar==3 ){
+  if ( ar == 3 ){
     // must alias
     // gep->getOperand(2) gives the index 
-    if (ConstantInt *indexGEP = dyn_cast<ConstantInt>(gep->getOperand(2))) {
-        signed accessedSize = indexGEP->getLimitedValue();
-        if (accessedSize < 0 || accessedSize > bufferSize-1) {
-          outs() << "Invalid Memory Access";
-          return;
-        }
-        outs() << "Valid Memory Access"; 
-        return;
+    ConstantInt *indexGEP = dyn_cast<ConstantInt>(gep->getOperand(2));
+    if (!indexGEP) {
+      auto *v = gep->getOperand(2);
+      recurseOnValue(v);
+      // outs() << "Unknown Memory Access";
+      return;
     }
-    outs() << "Unknown Memory Access";
+    signed accessedSize = indexGEP->getLimitedValue();
+    if (accessedSize < 0 || accessedSize > bufferSize-1) {
+      outs() << "Invalid Memory Access";
+      return;
+    }
+    outs() << "Valid Memory Access"; 
     return;
   }
   outs() << "Invalid Alias Analysis: " << ar << "\n";
   return;
+}
+
+void
+DataFlowPass::recurseOnValue(Value *v){
+  Instruction *i = dyn_cast<Instruction>(v);
+  if (!i){
+    ConstantInt *index = dyn_cast<ConstantInt>(v);
+    if (!index) {
+      outs() << "Unknown Memory Address in Recurse";
+      return;
+    }
+    // base case
+    signed accessedSize = index->getLimitedValue();
+    if (accessedSize < 0 || accessedSize > bufferSize-1) {
+      outs() << "Invalid Memory Access";
+      return;
+    }
+    outs() << "Accessed Index: " << accessedSize << "\n";
+    outs() << "Valid Memory Access"; 
+    return;
+  }
+  PHINode *phi = dyn_cast<PHINode>(i);
+  if (!phi){
+    outs() << "next operand is: " << *i->getOperand(0) << "\n";
+    recurseOnValue(i->getOperand(0));
+  }
+  // handle PHI Node
 }
 
 

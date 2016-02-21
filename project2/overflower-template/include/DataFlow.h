@@ -46,6 +46,8 @@ public:
 
   void checkLoad(llvm::Instruction *i);
 
+  void recurseOnValue(llvm::Value *v);
+
   void printGEPInfo(llvm::GetElementPtrInst *gep);
 
   void printAllocaInfo(llvm::AllocaInst *alloca);
