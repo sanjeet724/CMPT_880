@@ -6,6 +6,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/IR/Constants.h"
 
 #include <deque>
 #include <iterator>
@@ -29,9 +30,7 @@ DataFlowPass::runOnModule(Module &m) {
       for (auto &bb : f) {
         for (auto &i : bb) {
          checkAllocation(&i);
-         //getGEP(&i);
          checkLoad(&i);
-         //checkStore(&i);
         }
       }
     }
@@ -82,9 +81,9 @@ DataFlowPass::checkAllocation(Instruction *i) {
     return;
   }
   // printAllocaInfo(allocaInst);
-  // put the buffer size in a map
   allocated = i;
-  functionBufferMap.insert(std::make_pair(i->getParent()->getParent(),a->getNumElements()));
+  bufferSize = a->getNumElements();
+  functionBufferMap.insert(std::make_pair(allocated,bufferSize));
 }
 
 void 
@@ -116,27 +115,29 @@ DataFlowPass::checkLoad(Instruction *i) {
   if(!lInst) {
     return;
   }
-  // outs() << "Load Instruction Found: " << lInst << "\n";
-  // outs() << "Load Pointer operand: " << *lInst->getPointerOperand() << "\n";
-  // outs() << "Load address space: " << lInst->getPointerAddressSpace() << "\n";
   loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
   // get the GEP from the load instruction
   GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(lInst->getPointerOperand());
   if (!gep) {
     return;
   }
-  printGEPInfo(gep);
-  outs() << "Alloca: " << *allocated << "\n";
+  // printGEPInfo(gep);
   AliasAnalysis &AA = getAnalysis<AliasAnalysis>();
   AliasResult ar = AA.alias(allocated,gep->getPointerOperand());
   if ( ar==3 ){
-    outs() << "Must Alias\n" ;
+    // must alias
+    ConstantInt *indexGEP = cast<ConstantInt>(gep->getOperand(2)); // gep->getOperand(2) gives the index 
+    signed accessedSize = indexGEP->getLimitedValue();
+    if (accessedSize < 0 || accessedSize > bufferSize-1) {
+      outs() << "Invalid Memory Access";
+      return;
+    }
+    outs() << "Valid Memory Access"; 
   }
-
-  for(auto ab=gep->idx_begin(),ae=gep->idx_end();ab != ae; ab++) {
-    outs() << "ab is: " << ab << "\n";
+  else {
+    outs() << "Invalid Alias Analysis: " << ar << "\n";
   }
-  
+ 
 }
 
 

@@ -119,3 +119,5 @@ project2/build
 project2/filepolicy/FilePolicy.cpp
 
 project2/filepolicy/FilePolicy.h
+
+project2/Gohman-AliasAnalysis.pdf

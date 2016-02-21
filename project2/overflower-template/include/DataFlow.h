@@ -21,7 +21,8 @@ struct DataFlowPass : public llvm::ModulePass {
   static char ID;
   //llvm::Instruction* allocated;
   llvm::Instruction * allocated;
-  llvm::DenseMap<llvm::Function*, signed> functionBufferMap;
+  signed bufferSize;
+  llvm::DenseMap<llvm::Instruction*, signed> functionBufferMap;
   llvm::DenseMap<llvm::Function*, llvm::Instruction*> loadMap;
   llvm::DenseMap<llvm::Function*, llvm::Instruction*> storeMap;
   uint64_t callDepth = 0;
