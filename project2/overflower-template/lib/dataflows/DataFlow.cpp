@@ -129,16 +129,35 @@ DataFlowPass::checkLoop(Instruction *i){
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>(*i->getParent()->getParent()).getLoopInfo();
   BasicBlock *BB =  i->getParent();
   Loop *loop = LI->getLoopFor(BB);
-  // unsigned ld =  LI->getLoopDepth(BB);
-  // if ( ld>0 ) {
-  //   outs() << "Loop Depth: " << ld << "\n";
-  // }
   if (loop) {
+    ScalarEvolution &SCEV =  getAnalysis<ScalarEvolution>(*i->getParent()->getParent());
+    unsigned tripCount = SCEV.getSmallConstantTripCount(loop) - 1;
+    // outs() << "tripCount: " << tripCount << "\n";
     PHINode *phi = loop->getCanonicalInductionVariable();
     if (phi){
-      // outs() << "Induction Variable: " << *phi << "\n";
-      return  true;
+      // iterate over the operands of the phi node to find the starting index in the loop
+      for (signed op = 0 ; op < phi->getNumOperands();op++){
+        ConstantInt *intInPhi= dyn_cast<ConstantInt>(phi->getOperand(op));
+        if (!intInPhi){
+          continue;
+        }
+        unsigned startIndex = intInPhi->getLimitedValue();
+        // outs() << "Start Index: " << startIndex << "\n";
+        signed limits = startIndex + tripCount;
+        // outs() << "# of Accesses: " << limits << "\n";
+        // outs() << "Buffer Size: " << bufferSize << "\n";
+        signed accesedSize = (limits-1)*allocatedTypeSize;
+        // check array bounds
+        if (limits > bufferSize || limits < 0) {
+          outs() << "Out of Bounds Access Offset in Loop: " << accesedSize << "\n"; 
+        }
+        else {
+          outs() << "Memory Access Offset in Loop: " << accesedSize << "\n"; 
+        }
+      }
+      return true;
     }
+    return false;
   }
   return false;
 }
@@ -155,7 +174,6 @@ DataFlowPass::checkLoad(Instruction *i) {
     return;
   }
 
-  checkLoop(i);
   // loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
   // get the GEP from the load instruction
   GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(i);
@@ -177,7 +195,7 @@ DataFlowPass::checkLoad(Instruction *i) {
     signed accessedIndex = indexGEP->getLimitedValue();
     signed accesedSize = (accessedIndex)*allocatedTypeSize;
     if (accessedIndex < 0 || accessedIndex > bufferSize-1) {
-      outs() << "Invalid Memory Access: " << accesedSize << "\n";
+      outs() << "Invalid Memory Access Offset: " << accesedSize << "\n";
       return;
     }
     outs() << "Memory Access Offset: " << accesedSize << "\n" ;
@@ -190,6 +208,7 @@ DataFlowPass::checkLoad(Instruction *i) {
 void
 DataFlowPass::recurseOnValue(Value *v){
   Instruction *i = dyn_cast<Instruction>(v);
+
   if (!i){
     ConstantInt *index = dyn_cast<ConstantInt>(v);
     if (!index) {
@@ -207,7 +226,7 @@ DataFlowPass::recurseOnValue(Value *v){
     return;
   }
 
-  // check for loops
+   // check for loops
   if (checkLoop(i)){
     return;
   }

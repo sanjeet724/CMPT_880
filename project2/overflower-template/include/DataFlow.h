@@ -10,6 +10,7 @@
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>
@@ -39,6 +40,7 @@ public:
   getAnalysisUsage(llvm::AnalysisUsage &au) const override {
     au.addRequired<llvm::AliasAnalysis>();
     au.addRequired<llvm::LoopInfoWrapperPass>();
+    au.addRequired<llvm::ScalarEvolution>();
     au.setPreservesAll();
   }
 
