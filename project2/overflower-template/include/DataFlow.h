@@ -9,6 +9,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>
@@ -37,6 +38,7 @@ public:
   void
   getAnalysisUsage(llvm::AnalysisUsage &au) const override {
     au.addRequired<llvm::AliasAnalysis>();
+    au.addRequired<llvm::LoopInfoWrapperPass>();
     au.setPreservesAll();
   }
 
@@ -51,6 +53,8 @@ public:
   void checkLoad(llvm::Instruction *i);
 
   void recurseOnValue(llvm::Value *v);
+
+  bool checkLoop(llvm::Instruction *i);
 
   void printGEPInfo(llvm::GetElementPtrInst *gep);
 

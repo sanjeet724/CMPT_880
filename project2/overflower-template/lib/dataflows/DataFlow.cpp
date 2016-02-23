@@ -8,7 +8,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-
 #include <deque>
 #include <iterator>
 #include <set>
@@ -25,8 +24,9 @@ RegisterPass<DataFlowPass> X{"dataflows",
 
 bool 
 DataFlowPass::doInitialization(Module &m) {
-  const DataLayout &dl = m.getDataLayout();
-  dataL = &dl;
+  // const DataLayout &dl = m.getDataLayout();
+  // dataL = &dl;
+  dataL = &m.getDataLayout();
   return false;
 }
 
@@ -124,6 +124,26 @@ DataFlowPass::printGEPInfo(GetElementPtrInst *gep) {
   outs() << "GEP[2]: " << *gep->getOperand(2) << "\n";
 }
 
+bool
+DataFlowPass::checkLoop(Instruction *i){
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>(*i->getParent()->getParent()).getLoopInfo();
+  BasicBlock *BB =  i->getParent();
+  Loop *loop = LI->getLoopFor(BB);
+  // unsigned ld =  LI->getLoopDepth(BB);
+  // if ( ld>0 ) {
+  //   outs() << "Loop Depth: " << ld << "\n";
+  // }
+  if (loop) {
+    PHINode *phi = loop->getCanonicalInductionVariable();
+    if (phi){
+      // outs() << "Induction Variable: " << *phi << "\n";
+      return  true;
+    }
+  }
+  return false;
+}
+
+
 
 void
 DataFlowPass::checkLoad(Instruction *i) {
@@ -134,6 +154,8 @@ DataFlowPass::checkLoad(Instruction *i) {
   if(!i) {
     return;
   }
+
+  checkLoop(i);
   // loadMap.insert(std::make_pair(i->getParent()->getParent(),lInst));
   // get the GEP from the load instruction
   GetElementPtrInst *gep =  dyn_cast<GetElementPtrInst>(i);
@@ -184,6 +206,12 @@ DataFlowPass::recurseOnValue(Value *v){
     outs() << "Memory Access Offset: " << accesedSize << "\n" ;
     return;
   }
+
+  // check for loops
+  if (checkLoop(i)){
+    return;
+  }
+
   // outs() << "i is : " << *i << "\n";
   signed numOfOperands = i->getNumOperands();
   for (signed op = 0; op < numOfOperands; op++) {
