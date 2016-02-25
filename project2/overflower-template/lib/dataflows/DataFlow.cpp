@@ -97,11 +97,12 @@ DataFlowPass::checkAllocation(Instruction *i) {
   // outs() << "allocatedTypeSize is: " << allocatedTypeSize << "\n";
   bufferSize = a->getNumElements();
   bufferSizeByte = bufferSize * allocatedTypeSize;
-  outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
+  // outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
   functionBufferMap.insert(std::make_pair(allocated,bufferSize));
 }
 
-// helper functions just for diagnostic purposes
+// helper functions just for sanity checks purposes
+/*
 void 
 DataFlowPass::printAllocaInfo(AllocaInst *alloca) {
   outs() << "---Printing AllocaInst Info---\n";
@@ -123,6 +124,8 @@ DataFlowPass::printGEPInfo(GetElementPtrInst *gep) {
   outs() << "GEP #of Operands: " << gep->getNumOperands() << "\n";
   outs() << "GEP[2]: " << *gep->getOperand(2) << "\n";
 }
+*/
+
 
 bool
 DataFlowPass::checkLoop(Instruction *i){
@@ -149,10 +152,11 @@ DataFlowPass::checkLoop(Instruction *i){
         signed accesedSize = (limits-1)*allocatedTypeSize;
         // check array bounds
         if (limits > bufferSize || limits < 0) {
-          outs() << "Out of Bounds Access Offset in Loop: " << accesedSize << "\n"; 
+          outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
+          outs() << "Invalid Memory Access(in Loop) Offset: " << accesedSize << "\n"; 
         }
         else {
-          outs() << "Memory Access Offset in Loop: " << accesedSize << "\n"; 
+          // outs() << "Memory Access Offset in Loop: " << accesedSize << "\n"; 
         }
       }
       return true;
@@ -195,10 +199,11 @@ DataFlowPass::checkLoad(Instruction *i) {
     signed accessedIndex = indexGEP->getLimitedValue();
     signed accesedSize = (accessedIndex)*allocatedTypeSize;
     if (accessedIndex < 0 || accessedIndex > bufferSize-1) {
+      outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
       outs() << "Invalid Memory Access Offset: " << accesedSize << "\n";
       return;
     }
-    outs() << "Memory Access Offset: " << accesedSize << "\n" ;
+    // outs() << "Memory Access Offset: " << accesedSize << "\n" ;
     return;
   }
   outs() << "Invalid Alias Analysis: " << ar ;
@@ -212,17 +217,19 @@ DataFlowPass::recurseOnValue(Value *v){
   if (!i){
     ConstantInt *index = dyn_cast<ConstantInt>(v);
     if (!index) {
-      outs() << "Unknown Memory Address in Recurse \n";
+      outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
+      outs() << "Invalid Memory Access(index not known)\n";
       return;
     }
     // base case
     signed accessedIndex = index->getLimitedValue();
     signed accesedSize = (accessedIndex)*allocatedTypeSize;
     if (accessedIndex < 0 || accessedIndex > bufferSize-1) {
+      outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
       outs() << "Invalid Memory Access: " << accesedSize << "\n";
       return;
     }
-    outs() << "Memory Access Offset: " << accesedSize << "\n" ;
+    // outs() << "Memory Access Offset: " << accesedSize << "\n" ;
     return;
   }
 
