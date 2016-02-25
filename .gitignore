@@ -116,8 +116,12 @@ project2/overflower-template/test
 
 project2/build
 
+project2/submission
+
 project2/filepolicy/FilePolicy.cpp
 
 project2/filepolicy/FilePolicy.h
 
 project2/Gohman-AliasAnalysis.pdf
+
+*.pages
