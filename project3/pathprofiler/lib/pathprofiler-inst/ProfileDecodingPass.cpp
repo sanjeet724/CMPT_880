@@ -60,7 +60,7 @@ ProfileDecodingPass::runOnModule(Module &module) {
   outs() << "Top " << bbSequences.size() << " Paths\n"
          << "=========================================\n";
   for (size_t i = 0, e = bbSequences.size(); i < e; ++i) {
-    outs() << "Path, occurrences: " << paths[i].count << "\n";
+    // outs() << "Path, occurrences: " << paths[i].count << "\n";
     printPath(bbSequences[i]);
     outs() << "\n";
   }
