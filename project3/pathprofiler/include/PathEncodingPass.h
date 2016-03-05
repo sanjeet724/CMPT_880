@@ -17,8 +17,8 @@ namespace pathprofiling {
 struct PathEncodingPass : public llvm::ModulePass {
 
   static char ID;
-
-  // TODO: You will probably want to add things to this class.
+  // a map of the functions and its innermost loops
+  llvm::DenseMap<llvm::Function*,std::vector<llvm::Loop*>> FunctionLoopMap;
 
   PathEncodingPass()
     : llvm::ModulePass(ID)

@@ -26,7 +26,7 @@ namespace pathprofiling {
 bool
 PathEncodingPass::runOnModule(Module &module) {
   for (auto &f : module) {
-    if (!f.getName().startswith("llvm")) {
+    if (!f.getName().startswith("llvm") && !f.isDeclaration()) {
     	handleLoops(&f);
     }
   }
@@ -39,12 +39,16 @@ PathEncodingPass::handleLoops(Function *f) {
 	std::vector<llvm::Loop*> innerL = getInnermostLoops(*LI);
 	if (innerL.size() == 0) {
 		outs() << "No Inner Loops Found In Function\n";
+		return;
 	}
+	// iterate over the loops and encode them
+	for (auto &l : innerL) {
+		encode(l);
+	}
+	// FunctionLoopMap.insert(std::make_pair(f,innerL));
 }
 
 void
 PathEncodingPass::encode(Loop *loop) {
-
-  //
-
+	outs() << "In Encode\n";
 }
