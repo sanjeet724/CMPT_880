@@ -6,6 +6,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Analysis/LoopIterator.h"
 
 #include "PathEncodingPass.h"
 #include "InnermostLoops.h"
@@ -51,4 +52,5 @@ PathEncodingPass::handleLoops(Function *f) {
 void
 PathEncodingPass::encode(Loop *loop) {
 	outs() << "In Encode\n";
+	LoopBlocksDFS loopDFS(loop);
 }
