@@ -31,6 +31,8 @@ struct PathEncodingPass : public llvm::ModulePass {
 
   virtual bool runOnModule(llvm::Module &m) override;
 
+  void handleLoops(llvm::Function *f);
+
   void encode(llvm::Loop *loop);
 };
 
