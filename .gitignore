@@ -125,3 +125,9 @@ project2/filepolicy/FilePolicy.h
 project2/Gohman-AliasAnalysis.pdf
 
 *.pages
+
+project3/pathprofiler/test/Makefile
+
+project3/pathprofiler/docs/BUILDING
+
+project3/pathprofiler/test
