@@ -19,6 +19,7 @@ struct PathEncodingPass : public llvm::ModulePass {
   static char ID;
   // a map of the functions and its innermost loops
   llvm::DenseMap<llvm::Function*,std::vector<llvm::Loop*>> FunctionLoopMap;
+  llvm::LoopInfo *LI;
 
   PathEncodingPass()
     : llvm::ModulePass(ID)

@@ -36,7 +36,7 @@ PathEncodingPass::runOnModule(Module &module) {
 
 void
 PathEncodingPass::handleLoops(Function *f) {
-	LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>(*f).getLoopInfo();
+	LI = &getAnalysis<LoopInfoWrapperPass>(*f).getLoopInfo();
 	std::vector<llvm::Loop*> innerL = getInnermostLoops(*LI);
 	if (innerL.size() == 0) {
 		outs() << "No Inner Loops Found In Function\n";
@@ -52,5 +52,11 @@ PathEncodingPass::handleLoops(Function *f) {
 void
 PathEncodingPass::encode(Loop *loop) {
 	outs() << "In Encode\n";
-	LoopBlocksDFS loopDFS(loop);
+	LoopBlocksDFS *loopDFS = new LoopBlocksDFS(loop);
+	loopDFS->perform(LI);
+	for (auto BBBegin = loopDFS->beginPostorder(), 
+		 BBend = loopDFS->endPostorder(); BBBegin!=BBend; BBBegin++){
+		// iterate over the BB's in post order
+		outs() << "Block's PostOrderNumber: " << loopDFS->getPostorder(*BBBegin) << "\n";
+	}
 }
