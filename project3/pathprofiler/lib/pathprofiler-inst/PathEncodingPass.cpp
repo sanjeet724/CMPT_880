@@ -51,12 +51,55 @@ PathEncodingPass::handleLoops(Function *f) {
 
 void
 PathEncodingPass::encode(Loop *loop) {
-	outs() << "In Encode\n";
+	// outs() << "In Encode\n";
 	LoopBlocksDFS *loopDFS = new LoopBlocksDFS(loop);
 	loopDFS->perform(LI);
+	char name = 'a';
+	char *str = &name;
+	// reverse topological order is postorder
 	for (auto BBBegin = loopDFS->beginPostorder(), 
-		 BBend = loopDFS->endPostorder(); BBBegin!=BBend; BBBegin++){
+		      BBend = loopDFS->endPostorder();
+		      BBBegin!=BBend; BBBegin++){
 		// iterate over the BB's in post order
-		outs() << "Block's PostOrderNumber: " << loopDFS->getPostorder(*BBBegin) << "\n";
+		// BasicBlock *suc = (*BBBegin)->getUniquePredecessor();
+		// auto *succ = dyn_cast<BasicBlock>((*BBBegin)->getUniquePredecessor());
+		(*BBBegin)->setName(StringRef(str));
+	    name++;
+	    createValues(*BBBegin, loop);
+
+		// outs() << "Block's PostOrderNumber: " << loopDFS->getPostorder(*BBBegin) << "\n";
+	}
+	printNumPaths();
+}
+
+void
+PathEncodingPass::createValues(BasicBlock *bb, Loop *l){
+	// outs() << "Block: " << bb->getName() << ", ";
+	if (l->getLoopLatch() == bb) {
+		NumPaths.insert(std::make_pair(bb,1));
+	}
+	else {
+		NumPaths.insert(std::make_pair(bb,0));
+		const TerminatorInst *TInst = bb->getTerminator();
+		// outs() << "# of Successors: " << TInst->getNumSuccessors() << "\n";
+		for (unsigned I = 0, NSucc = TInst->getNumSuccessors(); I < NSucc; ++I) {
+			BasicBlock *Succ = TInst->getSuccessor(I);
+			if (l->contains(Succ)) {
+				 auto v1 = NumPaths.find(bb);
+				 auto v2 = NumPaths.find(Succ);
+				 v1->second = v1->second + v2->second;
+				 // outs() << "bb is: " << bb->getName() << " ,val is " << v1->second << "\n";
+				 // outs() << "Succ is: " << Succ->getName() << " ,val is " << v2->second << "\n";
+			}
+		}
+	}
+}
+
+void
+PathEncodingPass::printNumPaths() {
+	outs() << "NumPaths in Reverse Topilogical Order: \n";
+	for (auto &kv:NumPaths){
+		outs() << "BasicBlock: " << kv.first->getName() << ", ";
+		outs() << "NumPaths: " << kv.second << "\n";
 	}
 }

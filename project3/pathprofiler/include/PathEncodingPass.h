@@ -20,6 +20,7 @@ struct PathEncodingPass : public llvm::ModulePass {
   // a map of the functions and its innermost loops
   llvm::DenseMap<llvm::Function*,std::vector<llvm::Loop*>> FunctionLoopMap;
   llvm::LoopInfo *LI;
+  llvm::DenseMap<llvm::BasicBlock*, unsigned> NumPaths;
 
   PathEncodingPass()
     : llvm::ModulePass(ID)
@@ -33,6 +34,10 @@ struct PathEncodingPass : public llvm::ModulePass {
   virtual bool runOnModule(llvm::Module &m) override;
 
   void handleLoops(llvm::Function *f);
+
+  void createValues(llvm::BasicBlock *bb, llvm::Loop *l);
+
+  void printNumPaths();
 
   void encode(llvm::Loop *loop);
 };
