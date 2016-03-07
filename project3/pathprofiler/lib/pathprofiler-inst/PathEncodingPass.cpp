@@ -60,14 +60,9 @@ PathEncodingPass::encode(Loop *loop) {
 	for (auto BBBegin = loopDFS->beginPostorder(), 
 		      BBend = loopDFS->endPostorder();
 		      BBBegin!=BBend; BBBegin++){
-		// iterate over the BB's in post order
-		// BasicBlock *suc = (*BBBegin)->getUniquePredecessor();
-		// auto *succ = dyn_cast<BasicBlock>((*BBBegin)->getUniquePredecessor());
 		(*BBBegin)->setName(StringRef(str));
 	    name++;
 	    createValues(*BBBegin, loop);
-
-		// outs() << "Block's PostOrderNumber: " << loopDFS->getPostorder(*BBBegin) << "\n";
 	}
 	printNumPaths();
 }
@@ -88,8 +83,6 @@ PathEncodingPass::createValues(BasicBlock *bb, Loop *l){
 				 auto v1 = NumPaths.find(bb);
 				 auto v2 = NumPaths.find(Succ);
 				 v1->second = v1->second + v2->second;
-				 // outs() << "bb is: " << bb->getName() << " ,val is " << v1->second << "\n";
-				 // outs() << "Succ is: " << Succ->getName() << " ,val is " << v2->second << "\n";
 			}
 		}
 	}
