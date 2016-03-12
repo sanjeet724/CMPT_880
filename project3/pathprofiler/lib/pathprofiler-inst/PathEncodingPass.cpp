@@ -45,6 +45,8 @@ PathEncodingPass::handleLoops(Function *f) {
 	// iterate over the loops and encode them
 	for (auto &l : innerL) {
 		encode(l);
+		printNumPathsInLoop(l);
+		printValuesInLoop(l);
 	}
 	// FunctionLoopMap.insert(std::make_pair(f,innerL));
 }
@@ -62,26 +64,30 @@ PathEncodingPass::encode(Loop *loop) {
 		      BBBegin!=BBend; BBBegin++){
 		(*BBBegin)->setName(StringRef(str));
 	    name++;
-	    createValues(*BBBegin, loop);
+	    createNumPaths(*BBBegin, loop);
 	}
-	printNumPaths();
+	numPathsInLoop.insert(std::make_pair(loop, numPaths));
+	valuesInLoop.insert(std::make_pair(loop,values));
+	numPaths.clear();
+	values.clear();
 }
 
 void
-PathEncodingPass::createValues(BasicBlock *bb, Loop *l){
+PathEncodingPass::createNumPaths(BasicBlock *bb, Loop *l){
 	// outs() << "Block: " << bb->getName() << ", ";
 	if (l->getLoopLatch() == bb) {
-		NumPaths.insert(std::make_pair(bb,1));
+		numPaths.insert(std::make_pair(bb,1));
 	}
 	else {
-		NumPaths.insert(std::make_pair(bb,0));
+		numPaths.insert(std::make_pair(bb,0));
 		const TerminatorInst *TInst = bb->getTerminator();
 		// outs() << "# of Successors: " << TInst->getNumSuccessors() << "\n";
 		for (unsigned I = 0, NSucc = TInst->getNumSuccessors(); I < NSucc; ++I) {
 			BasicBlock *Succ = TInst->getSuccessor(I);
 			if (l->contains(Succ)) {
-				 auto v1 = NumPaths.find(bb);
-				 auto v2 = NumPaths.find(Succ);
+				 auto v1 = numPaths.find(bb);
+				 auto v2 = numPaths.find(Succ);
+				 values.insert(std::make_pair(std::make_pair(bb,Succ),v1->second));
 				 v1->second = v1->second + v2->second;
 			}
 		}
@@ -89,10 +95,33 @@ PathEncodingPass::createValues(BasicBlock *bb, Loop *l){
 }
 
 void
-PathEncodingPass::printNumPaths() {
-	outs() << "NumPaths in Reverse Topilogical Order: \n";
-	for (auto &kv:NumPaths){
+PathEncodingPass::printValues(llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned> val) {
+	outs() << "Edges and Vals: \n";
+	for (auto &kv:val){
+		auto e = kv.first;
+		outs() << e.first->getName() << "--->" << e.second->getName() << " " << kv.second << "\n";
+	}
+}
+
+void
+PathEncodingPass::printNumPaths(llvm::DenseMap<llvm::BasicBlock*, unsigned> n) {
+	outs() << "NumPaths in Reverse Topological Order: \n";
+	for (auto &kv:n){
 		outs() << "BasicBlock: " << kv.first->getName() << ", ";
 		outs() << "NumPaths: " << kv.second << "\n";
 	}
+}
+
+void
+PathEncodingPass::printNumPathsInLoop(Loop *l) {
+	auto nl = numPathsInLoop.find(l);
+	llvm::DenseMap<llvm::BasicBlock*, unsigned> n = nl->second;
+	printNumPaths(n);
+}
+
+void
+PathEncodingPass::printValuesInLoop(Loop *l){
+	auto vl = valuesInLoop.find(l);
+	llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned> v = vl->second;
+	printValues(v);
 }

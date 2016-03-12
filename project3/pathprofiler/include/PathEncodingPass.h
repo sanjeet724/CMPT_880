@@ -20,7 +20,14 @@ struct PathEncodingPass : public llvm::ModulePass {
   // a map of the functions and its innermost loops
   llvm::DenseMap<llvm::Function*,std::vector<llvm::Loop*>> FunctionLoopMap;
   llvm::LoopInfo *LI;
-  llvm::DenseMap<llvm::BasicBlock*, unsigned> NumPaths;
+  // numpaths
+  llvm::DenseMap<llvm::BasicBlock*, unsigned> numPaths;
+  llvm::DenseMap<llvm::Loop*,llvm::DenseMap<llvm::BasicBlock*, unsigned>> numPathsInLoop;
+  // edges and their values
+  llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned> values;
+  llvm::DenseMap<llvm::Loop*, 
+                 llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned>> valuesInLoop;
+
 
   PathEncodingPass()
     : llvm::ModulePass(ID)
@@ -35,9 +42,13 @@ struct PathEncodingPass : public llvm::ModulePass {
 
   void handleLoops(llvm::Function *f);
 
-  void createValues(llvm::BasicBlock *bb, llvm::Loop *l);
+  void createNumPaths(llvm::BasicBlock *bb, llvm::Loop *l);
 
-  void printNumPaths();
+  void printNumPaths(llvm::DenseMap<llvm::BasicBlock*, unsigned> numPaths);
+  void printNumPathsInLoop(llvm::Loop* l);
+
+  void printValues(llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned> values);
+  void printValuesInLoop(llvm::Loop* l);
 
   void encode(llvm::Loop *loop);
 };
