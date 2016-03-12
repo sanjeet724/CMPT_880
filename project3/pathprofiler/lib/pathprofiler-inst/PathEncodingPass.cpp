@@ -45,8 +45,8 @@ PathEncodingPass::handleLoops(Function *f) {
 	// iterate over the loops and encode them
 	for (auto &l : innerL) {
 		encode(l);
-		printNumPathsInLoop(l);
-		printValuesInLoop(l);
+		// printNumPathsInLoop(l);
+		// printValuesInLoop(l);
 	}
 	// FunctionLoopMap.insert(std::make_pair(f,innerL));
 }
@@ -87,7 +87,9 @@ PathEncodingPass::createNumPaths(BasicBlock *bb, Loop *l){
 			if (l->contains(Succ)) {
 				 auto v1 = numPaths.find(bb);
 				 auto v2 = numPaths.find(Succ);
-				 values.insert(std::make_pair(std::make_pair(bb,Succ),v1->second));
+				 if (v1->second > 0) {
+				 	values.insert(std::make_pair(std::make_pair(bb,Succ),v1->second));
+				 }
 				 v1->second = v1->second + v2->second;
 			}
 		}
