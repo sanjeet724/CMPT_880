@@ -28,37 +28,52 @@ bool
 PathProfilingPass::runOnModule(Module &module) {
 	nl = getAnalysis<PathEncodingPass>().numPathsInLoop;
 	vl = getAnalysis<PathEncodingPass>().valuesInLoop;
-	instrument_local();
+	for (auto &f : module) {
+	    if (!f.getName().startswith("llvm") && !f.isDeclaration()) {
+	    	allocateCounter(&f);
+	    }
+    }
+    instrument_local();
 	return true;
+}
+
+void
+PathProfilingPass::allocateCounter(Function *f) {
+	// get the entry block
+	auto &entry = f->getEntryBlock(); 
+	// get the first instruction of the entry block
+	auto firstInst = entry.getFirstInsertionPt(); 
+	//create a new allocation
+	AllocaInst* ai = new AllocaInst(Type::getInt32Ty(f->getContext()), "counter", firstInst); 
+	globalCounter = dyn_cast<AllocaInst>(ai);
+}
+
+void
+PathProfilingPass::initializeCounter(Function *f) {
+	ConstantInt *zero = ConstantInt::get(Type::getInt32Ty(f->getContext()),0);
+	outs() << "Inserting Instructions\n";
+	auto *SI = new StoreInst(zero,globalCounter);
+	SI->insertAfter(globalCounter);
 }
 
 void
 PathProfilingPass::instrument_local() {
 	uint64_t LoopId = 0;
-	// function context
-	// ConstantInt *zero = new ConstantInt(Type::getInt32Ty(getGlobalContext()), 0, false);
-	// ConstantInt *zero = new ConstantInt(Type::getInt32Ty(getGlobalContext()));
-	ConstantInt *zero;
-	//llvm::ConstantInt::get(getGlobalContext, llvm::APInt(32, 0, false));
 	for (auto &kv:vl) {
 		Loop *l = kv.first;
-		auto &entry = l->getHeader()->getParent()->getEntryBlock(); // get the entry block
-		auto firstInst = entry.getFirstInsertionPt(); // get the first instruction of the entry block
-        AllocaInst* ai = new AllocaInst(Type::getInt32Ty(getGlobalContext()),"counter", firstInst); //create a new instruction
-        auto *SI = new StoreInst(ai,zero);
-        SI->insertAfter(ai);
-       //  entry.getInstList().insert(firstInst, ai);    // insert the instruction
+		// counters are getting inserted multiple times, need to clear them
+		initializeCounter(l->getHeader()->getParent()); 
 		for ( auto &somePair:kv.second) {
 			auto bbPair = somePair.first;
 			BasicBlock *split = SplitEdge(bbPair.first,bbPair.second);
-			instrument(split,l,LoopId,ai);
+			instrument(split,l,LoopId);
 		}
 		LoopId++;
 	}
 }
 
 void
-PathProfilingPass::instrument(BasicBlock *bb, Loop *loop, uint64_t loopID, Instruction *a) {
+PathProfilingPass::instrument(BasicBlock *bb, Loop *loop, uint64_t loopID) {
 	// LoadInst *lInst = dyn_cast<LoadInst>(a);
 	// <result> = add <ty> <op1>, <op2>          ; yields ty:result
 }
