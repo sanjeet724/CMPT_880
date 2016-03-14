@@ -18,7 +18,7 @@ struct PathProfilingPass : public llvm::ModulePass {
   llvm::DenseMap<llvm::Loop*,llvm::DenseMap<llvm::BasicBlock*, unsigned>> nl;
   llvm::DenseMap<llvm::Loop*, 
                  llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned>> vl;
-  llvm::Instruction *globalCounter;
+  llvm::Value *globalCounter;
 
   PathProfilingPass()
     : llvm::ModulePass(ID)
@@ -33,11 +33,12 @@ struct PathProfilingPass : public llvm::ModulePass {
 
   void allocateCounter(llvm::Function *f);
 
-  void initializeCounter(llvm::Function *f);
+  void initializeCounter(llvm::BasicBlock *bb);
 
   void instrument_local();
 
-  void instrument(llvm::BasicBlock* bb, llvm::Loop *loop, uint64_t loopID);
+  void instrument(llvm::BasicBlock* bb, llvm::Loop *loop,
+                  uint64_t loopID, llvm::Value *counter, uint64_t eVal);
 
   // void instrument(llvm::Module &m, llvm::Value *counter,llvm::Loop *loop, uint64_t loopID);
 };

@@ -45,15 +45,14 @@ PathProfilingPass::allocateCounter(Function *f) {
 	auto firstInst = entry.getFirstInsertionPt(); 
 	//create a new allocation
 	AllocaInst* ai = new AllocaInst(Type::getInt32Ty(f->getContext()), "counter", firstInst); 
-	globalCounter = dyn_cast<AllocaInst>(ai);
+	globalCounter = ai;
 }
 
 void
-PathProfilingPass::initializeCounter(Function *f) {
-	ConstantInt *zero = ConstantInt::get(Type::getInt32Ty(f->getContext()),0);
+PathProfilingPass::initializeCounter(BasicBlock *BB) {
+	ConstantInt *zero = ConstantInt::get(Type::getInt32Ty(BB->getParent()->getContext()),0);
 	outs() << "Inserting Instructions\n";
-	auto *SI = new StoreInst(zero,globalCounter);
-	SI->insertAfter(globalCounter);
+	auto *SI = new StoreInst(zero,globalCounter, BB->getFirstNonPHI());
 }
 
 void
@@ -61,22 +60,26 @@ PathProfilingPass::instrument_local() {
 	uint64_t LoopId = 0;
 	for (auto &kv:vl) {
 		Loop *l = kv.first;
-		// counters are getting inserted multiple times, need to clear them
-		initializeCounter(l->getHeader()->getParent()); 
+		initializeCounter(l->getHeader()); 
 		for ( auto &somePair:kv.second) {
 			auto bbPair = somePair.first;
+			auto val = somePair.second;
 			BasicBlock *split = SplitEdge(bbPair.first,bbPair.second);
-			instrument(split,l,LoopId);
+			instrument(split,l,LoopId,globalCounter,val);
 		}
 		LoopId++;
 	}
 }
 
 void
-PathProfilingPass::instrument(BasicBlock *bb, Loop *loop, uint64_t loopID) {
-	// LoadInst *lInst = dyn_cast<LoadInst>(a);
-	// <result> = add <ty> <op1>, <op2>          ; yields ty:result
+PathProfilingPass::instrument(BasicBlock *bb, Loop *loop, uint64_t loopID,
+                              Value *c, uint64_t edgeVal) {
+	auto *LI = new LoadInst(c,"loadCounter", bb->getTerminator());
+	ConstantInt *eVal = ConstantInt::get(Type::getInt32Ty(bb->getParent()->getContext()),edgeVal);
+	BinaryOperator *bo = BinaryOperator::Create(Instruction::Add,LI,eVal,"", bb->getTerminator());
+	auto *SI = new StoreInst(bo, c, bb->getTerminator());
 }
+
 
 // to Do
 // 1 - Insert Instrcution at bbIteraor
