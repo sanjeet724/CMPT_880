@@ -15,10 +15,10 @@ namespace pathprofiling {
 struct PathProfilingPass : public llvm::ModulePass {
 
   static char ID;
-  llvm::DenseMap<llvm::BasicBlock*, unsigned> nbb;
-  llvm::DenseMap<llvm::Loop*,llvm::DenseMap<llvm::BasicBlock*, unsigned>> nl;
+  llvm::DenseMap<llvm::BasicBlock*, unsigned> BBnumPaths;
+  llvm::DenseMap<llvm::Loop*,llvm::DenseMap<llvm::BasicBlock*, unsigned>> numPathsInLoop;
   llvm::DenseMap<llvm::Loop*, 
-                 llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned>> vl;
+                 llvm::DenseMap<std::pair<llvm::BasicBlock*, llvm::BasicBlock*>, unsigned>> edgeVals;
   llvm::Value *globalCounter;
 
   PathProfilingPass()

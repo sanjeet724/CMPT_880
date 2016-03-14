@@ -25,8 +25,8 @@ char PathProfilingPass::ID = 0;
 
 bool
 PathProfilingPass::runOnModule(Module &module) {
-	nl = getAnalysis<PathEncodingPass>().numPathsInLoop;
-	vl = getAnalysis<PathEncodingPass>().valuesInLoop;
+	numPathsInLoop = getAnalysis<PathEncodingPass>().numPathsInLoop;
+	edgeVals = getAnalysis<PathEncodingPass>().valuesInLoop;
 	for (auto &f : module) {
 	    if (!f.getName().startswith("llvm") && !f.isDeclaration()) {
 	    	allocateCounter(&f);
@@ -50,8 +50,8 @@ PathProfilingPass::allocateCounter(Function *f) {
 void
 PathProfilingPass::initializeCounter(Loop *l) {
 	BasicBlock *BB = l->getHeader();
-	nbb = nl.find(l)->second;
-	auto num = nbb.find(BB)->second;
+	BBnumPaths = numPathsInLoop.find(l)->second;
+	auto num = BBnumPaths.find(BB)->second;
 	ConstantInt *zero = ConstantInt::get(Type::getInt32Ty(BB->getParent()->getContext()),0);
 	outs() << "Inserting Instructions\n";
 	auto *SI = new StoreInst(zero,globalCounter, BB->getFirstNonPHI());
@@ -82,7 +82,7 @@ PathProfilingPass::initializeCounter(Loop *l) {
 void
 PathProfilingPass::instrument_local() {
 	uint64_t LoopId = 0;
-	for (auto &kv:vl) {
+	for (auto &kv:edgeVals) {
 		Loop *l = kv.first;
 		initializeCounter(l); 
 		for (auto &somePair:kv.second) {
