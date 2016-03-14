@@ -33,6 +33,7 @@ PathProfilingPass::runOnModule(Module &module) {
 	    }
     }
     instrument_local();
+    instrument_loops();
 	return true;
 }
 
@@ -103,6 +104,24 @@ PathProfilingPass::instrument(BasicBlock *bb, Loop *loop, uint64_t loopID,
 	BinaryOperator *bo = BinaryOperator::Create(Instruction::Add,LI,eVal,"", bb->getTerminator());
 	auto *SI = new StoreInst(bo, c, bb->getTerminator());
 }
+
+void
+PathProfilingPass::instrument_loops() {
+	uint64_t LoopId = 0;
+	for (auto &kv:numPathsInLoop){
+		Loop *l = kv.first;
+		BBnumPaths = numPathsInLoop.find(l)->second; // BB's and their numpaths
+		for (auto &kv2:BBnumPaths){
+			BasicBlock *b = kv2.first;
+			if (l->isLoopExiting(b)){
+				//outs() << "Found an exit BB: " << b->getName() << "\n";
+				// insert a callsite to call the function in runtime.cpp
+			}
+		}
+
+	}
+}
+
 
 
 // to do

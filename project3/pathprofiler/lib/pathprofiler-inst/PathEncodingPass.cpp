@@ -45,8 +45,8 @@ PathEncodingPass::handleLoops(Function *f) {
 	// iterate over the loops and encode them
 	for (auto &l : innerL) {
 		encode(l);
-		// printNumPathsInLoop(l);
-		// printValuesInLoop(l);
+		printNumPathsInLoop(l);
+		printValuesInLoop(l);
 	}
 	// FunctionLoopMap.insert(std::make_pair(f,innerL));
 }

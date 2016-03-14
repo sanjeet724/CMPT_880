@@ -38,6 +38,8 @@ struct PathProfilingPass : public llvm::ModulePass {
 
   void instrument_local();
 
+  void instrument_loops();
+
   void instrument(llvm::BasicBlock* bb, llvm::Loop *loop,
                   uint64_t loopID, llvm::Value *counter, uint64_t eVal);
 
