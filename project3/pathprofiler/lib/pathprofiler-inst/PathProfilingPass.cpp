@@ -23,7 +23,6 @@ namespace pathprofiling {
 char PathProfilingPass::ID = 0;
 }
 
-
 bool
 PathProfilingPass::runOnModule(Module &module) {
 	nl = getAnalysis<PathEncodingPass>().numPathsInLoop;
@@ -49,10 +48,35 @@ PathProfilingPass::allocateCounter(Function *f) {
 }
 
 void
-PathProfilingPass::initializeCounter(BasicBlock *BB) {
+PathProfilingPass::initializeCounter(Loop *l) {
+	BasicBlock *BB = l->getHeader();
+	nbb = nl.find(l)->second;
+	auto num = nbb.find(BB)->second;
 	ConstantInt *zero = ConstantInt::get(Type::getInt32Ty(BB->getParent()->getContext()),0);
 	outs() << "Inserting Instructions\n";
 	auto *SI = new StoreInst(zero,globalCounter, BB->getFirstNonPHI());
+	// global variable injection
+	Type *I = IntegerType::getInt32Ty(BB->getParent()->getContext());
+	// uint64_t num = nbb.find(BB); // # of numpaths for the BB
+    Type *arrayType = ArrayType::get(I, num);
+    // pathcount in runtime
+	GlobalVariable *PaThPrOfIlInG_pathCounts = new GlobalVariable(arrayType,
+	    	                                        false,
+	    	                                        GlobalValue::ExternalLinkage,
+	    	                                        nullptr,
+	    	                                        "pathCounts",
+	    	                                        GlobalValue::NotThreadLocal,
+	    	                                        0,
+	    	                                        false);
+	// numpaths in runtime
+	GlobalVariable *PaThPrOfIlInG_numPaths = new GlobalVariable(I,
+	    	                                        false,
+	    	                                        GlobalValue::ExternalLinkage,
+	    	                                        nullptr,
+	    	                                        "numOfPaths",
+	    	                                        GlobalValue::NotThreadLocal,
+	    	                                        0,
+	    	                                        false);
 }
 
 void
@@ -60,8 +84,8 @@ PathProfilingPass::instrument_local() {
 	uint64_t LoopId = 0;
 	for (auto &kv:vl) {
 		Loop *l = kv.first;
-		initializeCounter(l->getHeader()); 
-		for ( auto &somePair:kv.second) {
+		initializeCounter(l); 
+		for (auto &somePair:kv.second) {
 			auto bbPair = somePair.first;
 			auto val = somePair.second;
 			BasicBlock *split = SplitEdge(bbPair.first,bbPair.second);
@@ -81,11 +105,9 @@ PathProfilingPass::instrument(BasicBlock *bb, Loop *loop, uint64_t loopID,
 }
 
 
-// to Do
-// 1 - Insert Instrcution at bbIteraor
-// store instrcution with const integer value, location to store will be allocainst
-// everytime we split the block, increment the pointer (load,)
-// now when we exit the loop, save this in the runtime
+// to do
+// At the loopExitBlock, insert a callsite which will
+// call the runtime method to track the instrumentation
 
 /*
 void
