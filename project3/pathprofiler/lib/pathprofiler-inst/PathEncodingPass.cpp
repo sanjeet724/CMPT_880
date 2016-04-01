@@ -89,8 +89,8 @@ PathEncodingPass::createNumPaths(BasicBlock *bb, Loop *l){
 				 auto v2 = numPaths.find(Succ);
 				 if (v1->second > 0) {
 				 	values.insert(std::make_pair(std::make_pair(bb,Succ),v1->second));
-				 }
-				 v1->second = v1->second + v2->second;
+				}
+				v1->second = v1->second + v2->second;
 			}
 		}
 	}
