@@ -24,17 +24,11 @@ RegisterPass<NonDeterPass> X{"nondeterminism",
 bool
 NonDeterPass::runOnModule(Module &m) {
     for (auto &f : m) {
-      if(!(f.getName().startswith("_") || f.getName().startswith("llvm"))) {
-        // check if function is already in the map
+      if(!(f.getName().startswith("_") || f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
         outs() << "Function Name: " << f.getName() << "\n";
-        std::vector<llvm::CallSite> functionCSVector;
-        auto findFunction =  functionCallSiteMap.find(&f); 
-        if (functionCallSiteMap.end() == findFunction) {
-            functionCallSiteMap.insert(std::make_pair(&f,functionCSVector));
-        }
         for (auto &bb : f) {
           for (auto &i : bb) {
-            handleInstruction(CallSite(&i));
+            checkAllocation(&i);
           }
         }
       }
@@ -43,36 +37,43 @@ NonDeterPass::runOnModule(Module &m) {
 }
 
 void
-NonDeterPass::handleInstruction(CallSite cs) {
-  // Check whether the instruction is actually a call
-  if (!cs.getInstruction()) {
+NonDeterPass::checkAllocation(Instruction *i) {
+  AllocaInst *allocaInst = dyn_cast<AllocaInst>(i);
+  if (!allocaInst){
     return;
   }
+  auto *p = allocaInst->getType();
+  outs() << "AllocaInst Name: " << allocaInst->getName() << "\n";
+  outs() << "Allocated Type: " << *allocaInst->getAllocatedType() << "\n";
+  //outs() << "Allocation Type: " << *p->getElementType() << "\n";
+  // FunctionType *fType = dyn_cast<FunctionType>(p->getElementType());
+  // if (fType) {
+  //   outs() << "FunctionType Found\n"; 
+  // }
+  // else {
+  //   outs() << "No FunctionType Found\n"; 
+  // }
+  // outs() << "Allocation Type: " << *p->getElementType() << ", ID: " <<  p->getElementType()->getTypeID() << "\n";
 
-  // Check whether the called function is directly invoked
-  auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
-  if (!called || called->getName().startswith("llvm")) {
-    if (!called) {
-      handleFunctionPointer(cs); // function pointer
-    }
-    else {
-      return;
-    }
-  return;
-  }
 
-  // Store each CallSite of a function in a map (function* : vector of callsites)
-  std::vector<llvm::CallSite> functionCSVector;
-  auto caller = cs.getCaller();
-  auto parentFunction =  functionCallSiteMap.find(caller);
-  if (functionCallSiteMap.end() == parentFunction) {
-    functionCSVector.push_back(cs);
-    functionCallSiteMap.insert(std::make_pair(caller,functionCSVector));
+  /*
+  // we need it only if the allocation is an array
+  ArrayType *a = dyn_cast<ArrayType>(p->getElementType()); 
+  if (!a) {
+    return;
   }
-  else {
-    parentFunction->second.push_back(cs);
-  }
+ //  printAllocaInfo(allocaInst);
+  allocated = i;
+  // outs() << "Array Type is: " << *a->getElementType() << "\n";
+  allocatedTypeSize = dataL->getTypeStoreSize(a->getElementType());
+  // outs() << "allocatedTypeSize is: " << allocatedTypeSize << "\n";
+  bufferSize = a->getNumElements();
+  bufferSizeByte = bufferSize * allocatedTypeSize;
+  // outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
+  functionBufferMap.insert(std::make_pair(allocated,bufferSize));
+  */
 }
+
 
 void
 NonDeterPass::createFunctionPointerMap(CallSite cs) {

@@ -31,9 +31,9 @@ public:
     au.setPreservesAll();
   }
 
-  bool runOnModule(llvm::Module &m) override;
+  void checkAllocation(llvm::Instruction *i);
 
-  void handleInstruction(llvm::CallSite cs);
+  bool runOnModule(llvm::Module &m) override;
 
   void handleFunctionPointer(llvm::CallSite cs);
 
