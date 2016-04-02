@@ -38,6 +38,8 @@ public:
   void handleFunctionPointer(llvm::CallSite cs);
 
   void createFunctionPointerMap(llvm::CallSite cs);
+
+  void getFunctionParameters(llvm::Type *t);
 };
 
 }

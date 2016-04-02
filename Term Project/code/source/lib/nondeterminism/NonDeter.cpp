@@ -25,7 +25,7 @@ bool
 NonDeterPass::runOnModule(Module &m) {
     for (auto &f : m) {
       if(!(f.getName().startswith("_") || f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
-        outs() << "Function Name: " << f.getName() << "\n";
+        // outs() << "Function Name: " << f.getName() << "\n";
         for (auto &bb : f) {
           for (auto &i : bb) {
             checkAllocation(&i);
@@ -37,15 +37,37 @@ NonDeterPass::runOnModule(Module &m) {
 }
 
 void
+NonDeterPass::getFunctionParameters(Type *t) {
+  StructType *st = dyn_cast<StructType>(t); 
+  if (st) {
+    if (st->getName().endswith("unordered_set")) {
+      outs() << "Unordered Set Detected\n";
+    }
+  }
+}
+
+void
 NonDeterPass::checkAllocation(Instruction *i) {
   AllocaInst *allocaInst = dyn_cast<AllocaInst>(i);
   if (!allocaInst){
     return;
   }
   auto *p = allocaInst->getType();
-  outs() << "AllocaInst Name: " << allocaInst->getName() << "\n";
-  outs() << "Allocated Type: " << *allocaInst->getAllocatedType() << "\n";
-  //outs() << "Allocation Type: " << *p->getElementType() << "\n";
+  //outs() << "AllocaInst Name: " << allocaInst->getName() << "\n";
+  // outs() << "Allocated Type: " << *allocaInst->getAllocatedType() << "\n";
+  // outs() << "Allocation Type: " << *p->getElementType() << "\n";
+  if (p->getElementType()->isStructTy()) {
+    getFunctionParameters(p->getElementType());
+    //outs() << *p->getElementType() << ", ";
+    //outs() << "ID: " << p->getElementType()->getTypeID() << "\n";
+  }
+  // if (p->getElementType()->getTypeID() == 12) {
+  //   // outs() << "Type Name: " << *p->getElementType() << "\n";
+  //  // getFunctionParameters(p->getElementType());
+  //   if (isa<FunctionType>(*p->getElementType())) {
+  //    //  outs() << "FunctionType Found\n"; 
+  //   }
+  // }
   // FunctionType *fType = dyn_cast<FunctionType>(p->getElementType());
   // if (fType) {
   //   outs() << "FunctionType Found\n"; 
