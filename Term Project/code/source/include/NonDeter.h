@@ -25,6 +25,7 @@ struct NonDeterPass : public llvm::ModulePass {
   bool pointersAsAddress = false;
   bool loopIteratorType = false;
   unsigned callDepth = 0;
+  unsigned totalIRFunctions = 0;
 
 public:
   NonDeterPass()

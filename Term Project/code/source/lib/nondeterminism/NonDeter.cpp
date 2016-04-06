@@ -24,6 +24,7 @@ RegisterPass<NonDeterPass> X{"nondeterminism",
 bool
 NonDeterPass::runOnModule(Module &m) {
   for (auto &f : m) {
+    totalIRFunctions++;
     if(!(f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
       findInserts(&f);
       findIterators(&f);
@@ -34,7 +35,6 @@ NonDeterPass::runOnModule(Module &m) {
       }
     }
   }
-  // outs() << "Size of iterators: " << iteratorNodes.size() << "\n";
   checkInserts();
   checkIterators();
   detectNonDeterminism();
@@ -156,7 +156,7 @@ NonDeterPass::handleCallSite(CallSite cs) {
   if (called && !pointersAsAddress) {
     callDepth++;
     if (called->getName().startswith("llvm") || called->getName().startswith("__")) {
-    return;
+     return;
     }
     auto someFunction =  searchSpace.find(called);
     if (searchSpace.end() == someFunction) {
@@ -221,6 +221,7 @@ NonDeterPass::checkAllocatorFunction(Function *f){
 
 void 
 NonDeterPass::detectNonDeterminism() {
+  outs() << "Total # of IR Functions: " << totalIRFunctions << "\n";
   if (pointersAsAddress && loopIteratorType) {
     outs() << "Input file has non-deterministic behavior\n" ;
   }
