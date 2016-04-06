@@ -21,6 +21,7 @@ RegisterPass<NonDeterPass> X{"nondeterminism",
                              "detect non-determinism in a module"};
 
 
+// First detect if we have a set/hash-table type in the IR code
 bool
 NonDeterPass::runOnModule(Module &m) {
     for (auto &f : m) {
@@ -33,95 +34,24 @@ NonDeterPass::runOnModule(Module &m) {
         }
       }
     }
-    checkInserts();
+  checkInserts();
   return false;
 }
 
-// this function finds all the functions that have a "insert"
+// std::sets are of struct types in IR code
 void
-NonDeterPass::findInserts(Function *f) {
-  if (f->getName().find("insert") != StringRef::npos){
-    insertFunctions.push_back(f);
-  }
-}
-
-void
-NonDeterPass::checkInserts() {
-  for (auto &f:insertFunctions) {
-    for (auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
-      if (ab->getType()->isPointerTy()) {
-        auto *p = ab->getType()->getPointerElementType();
-        StructType *argType = dyn_cast<StructType>(p);
-        if (argType){
-          if (argType == detectedContainer) { 
-            // data-flow analysis to be done on this function
-            outs() << "Same Type Detected in Insert Function Call\n";
-            performDataFlow(f);
-          }
-        }
-      }
-    }
-  }
-  if (allocatorFunction) {
-     checkAlocatorFunction(allocatorFunction);
-  }
-}
-
-void
-NonDeterPass::performDataFlow(Function *f) {
-  //outs() << "CallDepth: " << callDepthCounter << "-----------\n";
-  //outs() << "Callsites for: " << f->getName() << "\n";
-  //outs() << f->getName() << "----------\n";
-  callDepthCounter++;
-  for (auto &bb:*f) {
-    for (auto &i : bb) {
-      handleCallSite(CallSite(&i));
-    }
-  }
-}
-
-void 
-NonDeterPass::checkAlocatorFunction(Function *f){
-  outs() << "Call depth: " << callDepthCounter << "\n";
-  outs() << f->getName() << "\n";
-  for (auto &bb:*f) {
-    for (auto &i : bb) {
-      PtrToIntInst *ptrtoInt = dyn_cast<PtrToIntInst>(&i);
-      if (ptrtoInt){
-        outs() << "ptrtoInt Instruction Found\n";
-      }
-    }
-  }
-}
-
-void 
-NonDeterPass::handleCallSite(CallSite cs) {
-  if (!cs.getInstruction()) {
+NonDeterPass::checkAllocation(Instruction *i) {
+  AllocaInst *allocaInst = dyn_cast<AllocaInst>(i);
+  if (!allocaInst){
     return;
   }
-  auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
-  if (called->getName().startswith("llvm") || called->getName().startswith("__")) {
-    return;
-  }
-  // searchPtrtoIntInstr(cs.getInstruction());
-  if (called->getName().startswith("_ZNKSt4hashIPSsEclES0_")) {
-    allocatorFunction = called;
-    return;
-  }
-  else {
-    performDataFlow(called);
+  auto *p = allocaInst->getType();
+  if (p->getElementType()->isStructTy()) { 
+    getFunctionParameters(p->getElementType());
   }
 }
 
-void
-NonDeterPass::searchPtrtoIntInstr(Instruction *i){
-  outs() << *i << "\n";
-  PtrToIntInst *ptrtoInt = dyn_cast<PtrToIntInst>(i);
-  if (ptrtoInt) {
-    outs() << "ptrtoInt Instruction Found\n";
-  }
-}
-
+// check if the allocation is a set
 void
 NonDeterPass::getFunctionParameters(Type *t) {
   StructType *st = dyn_cast<StructType>(t); 
@@ -133,91 +63,100 @@ NonDeterPass::getFunctionParameters(Type *t) {
   }
 }
 
+// this function finds all the functions that have an "insert"
+// the IR function doing the actual allocation of a element to a set, have an "insert"
 void
-NonDeterPass::checkAllocation(Instruction *i) {
-  AllocaInst *allocaInst = dyn_cast<AllocaInst>(i);
-  if (!allocaInst){
-    return;
-  }
-  auto *p = allocaInst->getType();
-  //outs() << "AllocaInst Name: " << allocaInst->getName() << "\n";
-  // outs() << "Allocated Type: " << *allocaInst->getAllocatedType() << "\n";
-  // outs() << "Allocation Type: " << *p->getElementType() << "\n";
-  if (p->getElementType()->isStructTy()) {
-    getFunctionParameters(p->getElementType());
-    // outs() << *p->getElementType() << ", ";
-    // outs() << "ID: " << p->getElementType()->getTypeID() << "\n";
-  }
-  // if (p->getElementType()->getTypeID() == 12) {
-  //   // outs() << "Type Name: " << *p->getElementType() << "\n";
-  //  // getFunctionParameters(p->getElementType());
-  //   if (isa<FunctionType>(*p->getElementType())) {
-  //    //  outs() << "FunctionType Found\n"; 
-  //   }
-  // }
-  // FunctionType *fType = dyn_cast<FunctionType>(p->getElementType());
-  // if (fType) {
-  //   outs() << "FunctionType Found\n"; 
-  // }
-  // else {
-  //   outs() << "No FunctionType Found\n"; 
-  // }
-  // outs() << "Allocation Type: " << *p->getElementType() << ", ID: " <<  p->getElementType()->getTypeID() << "\n";
-
-
-  /*
-  // we need it only if the allocation is an array
-  ArrayType *a = dyn_cast<ArrayType>(p->getElementType()); 
-  if (!a) {
-    return;
-  }
- //  printAllocaInfo(allocaInst);
-  allocated = i;
-  // outs() << "Array Type is: " << *a->getElementType() << "\n";
-  allocatedTypeSize = dataL->getTypeStoreSize(a->getElementType());
-  // outs() << "allocatedTypeSize is: " << allocatedTypeSize << "\n";
-  bufferSize = a->getNumElements();
-  bufferSizeByte = bufferSize * allocatedTypeSize;
-  // outs() << "Buffer size in bytes: " << bufferSizeByte << "\n";
-  functionBufferMap.insert(std::make_pair(allocated,bufferSize));
-  */
-}
-
-
-void
-NonDeterPass::createFunctionPointerMap(CallSite cs) {
-  // Store each CallSite of a function in a map (function* : vector of callsites)
-  std::vector<llvm::CallSite> functionCSVector;
-  auto caller = cs.getInstruction()->getParent()->getParent();
-  auto parentFunction =  functionCallSiteMap.find(caller);
-  if (functionCallSiteMap.end() == parentFunction) {
-    functionCSVector.push_back(cs);
-    functionCallSiteMap.insert(std::make_pair(caller,functionCSVector));
-  }
-  else {
-    parentFunction->second.push_back(cs);
+NonDeterPass::findInserts(Function *f) {
+  if (f->getName().find("insert") != StringRef::npos){
+    insertFunctions.push_back(f);
   }
 }
 
+// we check for all the functions in the IR code that have an "insert"
+// specifically we check for the arguments in that function
+// if one of the arguments is of the container type (set/hash-table) detected earlier,
+// then most probably the allocation is occuring in one of these functions
 void
-NonDeterPass::handleFunctionPointer(CallSite cs) {
-  for (auto &f:candidates) {
-    if (cs.getNumArgOperands() == f->arg_size()){ 
-      unsigned argCounter = 0;
-      for(auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
-        if (ab->getType() != cs.getArgument(argCounter)->getType()) {
-          return;
+NonDeterPass::checkInserts() {
+  for (auto &f:insertFunctions) {
+    for (auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
+      if (ab->getType()->isPointerTy()) {
+        auto *p = ab->getType()->getPointerElementType();
+        StructType *argType = dyn_cast<StructType>(p);
+        if (argType){
+          if (argType == detectedContainer) { 
+            outs() << "Argument Type is same as Container Type\n";
+            performDataFlow(f);
+          }
         }
-        else {
-          ++argCounter;
-        }
-      }
-      if (argCounter == cs.getNumArgOperands()) {
-         matchedVF.push_back(f);
       }
     }
   }
-  if (matchedVF.size() > 0) {
-    createFunctionPointerMap(cs);
+  outs() << "Size of Search Space: " << searchSpace.size() << "\n";
+  searchFunctions();
+}
+
+// Go though this function and create a map of all the functions it calls
+void
+NonDeterPass::performDataFlow(Function *f) {
+  for (auto &bb:*f) {
+    for (auto &i : bb) {
+      handleCallSite(CallSite(&i));
+    }
   }
 }
+
+// Check if an instruction is a call-site and then recurse on this call-site to
+// generate the searchSpace map (Recursion)
+void 
+NonDeterPass::handleCallSite(CallSite cs) {
+  if (!cs.getInstruction()) {
+    return;
+  }
+  auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
+  if (called->getName().startswith("llvm") || called->getName().startswith("__")) {
+    return;
+  }
+  auto someFunction =  searchSpace.find(called);
+  if (searchSpace.end() == someFunction) {
+    searchSpace.insert(std::make_pair(called,false));
+  }
+  performDataFlow(called); // recurse
+}
+
+// Go through the map of called functions from our main function(having the "insert")
+// Specifically look for PtrToIntInst instructions in these functions
+void
+NonDeterPass::searchFunctions() {
+  for (auto &kv:searchSpace){
+    auto &f = kv.first;
+    if (checkAlocatorFunction(f)) {
+      outs() << f->getName() << "\n";
+      kv.second = true;
+    }
+  }
+}
+
+// A PtrToIntInst instruction shows us that the main "insert" function
+// is allocating an integer to store the element
+// Since the container(set/hash-map) is storing addresses and addresses are stored as ints
+// internally by the allocator
+bool 
+NonDeterPass::checkAlocatorFunction(Function *f){
+  for (auto &bb:*f) {
+    for (auto &i : bb) {
+      PtrToIntInst *ptrtoInt = dyn_cast<PtrToIntInst>(&i);
+      if (ptrtoInt){
+        outs() << "ptrtoInt Instruction Found\n";
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+
+
+
+
+
