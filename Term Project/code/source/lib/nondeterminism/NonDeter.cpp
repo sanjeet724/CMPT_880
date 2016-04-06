@@ -91,7 +91,7 @@ NonDeterPass::checkIterators() {
         if(argType){
           if(argType == detectedContainer){
             outs() << "Function used for Iteration: " << f->getName() << "\n";
-            outs() << "Argument is of same type as Container\n";
+            outs() << "Argument Type(for Loop) is of same type as Container\n";
             loopIteratorType = true;
             return;
           }
@@ -125,14 +125,14 @@ NonDeterPass::checkInserts() {
         if (argType){
           if (argType == detectedContainer) { 
             outs() << "Function used for Insert: " << f->getName() << "\n";
-            outs() << "Argument Type is same as Container\n";
+            outs() << "Argument Type(for Insert) is same as Container\n";
             createSearchSpace(f);
           }
         }
       }
     }
   }
-  searchFunctions();
+  // searchFunctions(); // not needed anymore as we are doing callsite sensitivity
 }
 
 // Go though this function and create a map of all the functions it calls
@@ -153,7 +153,8 @@ NonDeterPass::handleCallSite(CallSite cs) {
     return;
   }
   auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
-  if (called) {
+  if (called && !pointersAsAddress) {
+    callDepth++;
     if (called->getName().startswith("llvm") || called->getName().startswith("__")) {
     return;
     }
@@ -161,12 +162,33 @@ NonDeterPass::handleCallSite(CallSite cs) {
     if (searchSpace.end() == someFunction) {
       searchSpace.insert(std::make_pair(called,false));
     }
+    if (analyzeCallSite(called)) {
+      return;
+    }
     createSearchSpace(called); // recurse
   }
 }
 
+bool 
+NonDeterPass::analyzeCallSite(Function *f) {
+  for (auto &bb:*f) {
+    for (auto &i : bb) {
+      PtrToIntInst *ptrtoInt = dyn_cast<PtrToIntInst>(&i);
+      if (ptrtoInt){
+        outs() << "ptrtoInt Instruction Found in:-->" << f->getName() <<"\n";
+        outs() << "CallSite Sensitivity Depth: " << callDepth << "\n";
+        pointersAsAddress = true;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Go through the map of called functions from our main function(having the "insert")
 // Specifically look for PtrToIntInst instructions in these functions
+// This is not needed anymore as we are doing call-site sensitivity
+// Data-Flow Analysis : - check if an address is getting coverted to an integer
 void
 NonDeterPass::searchFunctions() {
   for (auto &kv:searchSpace){

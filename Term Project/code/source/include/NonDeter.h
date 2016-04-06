@@ -24,6 +24,7 @@ struct NonDeterPass : public llvm::ModulePass {
   std::vector<llvm::Function*> iteratorFunctions;
   bool pointersAsAddress = false;
   bool loopIteratorType = false;
+  unsigned callDepth = 0;
 
 public:
   NonDeterPass()
@@ -46,6 +47,8 @@ public:
   void searchFunctions();
 
   void handleCallSite(llvm::CallSite cs);
+
+  bool analyzeCallSite(llvm::Function *f);
 
   void checkAllocation(llvm::Instruction *i);
 
