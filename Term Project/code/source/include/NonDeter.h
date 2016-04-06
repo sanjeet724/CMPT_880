@@ -19,7 +19,11 @@ struct NonDeterPass : public llvm::ModulePass {
   static char ID;
   std::vector<llvm::Function*> insertFunctions;
   llvm::Type* detectedContainer;
-  llvm::DenseMap<llvm::Function*, bool> searchSpace; // search all these functions
+  llvm::DenseMap<llvm::Function*, bool> searchSpace; 
+  llvm::Type* detectedIterator;
+  std::vector<llvm::Function*> iteratorFunctions;
+  bool pointersAsAddress = false;
+  bool loopIteratorType = false;
 
 public:
   NonDeterPass()
@@ -35,9 +39,9 @@ public:
 
   void checkInserts(); 
 
-  void performDataFlow(llvm::Function *f);
+  void createSearchSpace(llvm::Function *f);
 
-  bool checkAlocatorFunction(llvm::Function *f);
+  bool checkAllocatorFunction(llvm::Function *f);
 
   void searchFunctions();
 
@@ -51,7 +55,13 @@ public:
 
   void createFunctionPointerMap(llvm::CallSite cs);
 
-  void getFunctionParameters(llvm::Type *t);
+  void getFunctionParameters(llvm::Type *t, llvm::Instruction *i);
+
+  void findIterators(llvm::Function *f);
+
+  void checkIterators();
+
+  void detectNonDeterminism();
 };
 
 }

@@ -6,7 +6,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Casting.h"
-
 #include <deque>
 #include <iterator>
 #include <set>
@@ -24,19 +23,24 @@ RegisterPass<NonDeterPass> X{"nondeterminism",
 // First detect if we have a set/hash-table type in the IR code
 bool
 NonDeterPass::runOnModule(Module &m) {
-    for (auto &f : m) {
-      if(!(f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
-        findInserts(&f);
-        for (auto &bb : f) {
-          for (auto &i : bb) {
-            checkAllocation(&i);
-          }
+  for (auto &f : m) {
+    if(!(f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
+      findInserts(&f);
+      findIterators(&f);
+      for (auto &bb : f) {
+        for (auto &i : bb) {
+          checkAllocation(&i);
         }
       }
     }
+  }
+  // outs() << "Size of iterators: " << iteratorNodes.size() << "\n";
   checkInserts();
+  checkIterators();
+  detectNonDeterminism();
   return false;
 }
+
 
 // std::sets are of struct types in IR code
 void
@@ -47,18 +51,52 @@ NonDeterPass::checkAllocation(Instruction *i) {
   }
   auto *p = allocaInst->getType();
   if (p->getElementType()->isStructTy()) { 
-    getFunctionParameters(p->getElementType());
+    getFunctionParameters(p->getElementType(),i);
   }
 }
 
 // check if the allocation is a set
+// check for iterators
 void
-NonDeterPass::getFunctionParameters(Type *t) {
-  StructType *st = dyn_cast<StructType>(t); 
+NonDeterPass::getFunctionParameters(Type *t, Instruction *i) {
+  StructType *st = dyn_cast<StructType>(t);
   if (st) {
     if (st->getName().endswith("unordered_set")) {
       detectedContainer = st;
-      outs() << "Unordered Set Detected\n";
+      outs() << "Type of Container: Unordered Set \n";
+      return;
+    }
+    if (st->getName().endswith("_Node_iterator")) {
+      detectedIterator = st;
+      return;
+    }
+  }
+}
+
+void
+NonDeterPass::findIterators(Function *f) {
+  if(f->getName().find("unordered_set") != StringRef::npos && (f->getName().find("beginEv") != StringRef::npos ||
+    f->getName().find("endEv") != StringRef::npos)){
+    iteratorFunctions.push_back(f);
+  }
+}
+
+void
+NonDeterPass::checkIterators() {
+  for (auto &f:iteratorFunctions) {
+    for (auto ab = f->arg_begin(), ae = f->arg_end(); ab!=ae; ab++){
+      if (ab->getType()->isPointerTy()){
+        auto *p = ab->getType()->getPointerElementType();
+        StructType *argType = dyn_cast<StructType>(p);
+        if(argType){
+          if(argType == detectedContainer){
+            outs() << "Function used for Iteration: " << f->getName() << "\n";
+            outs() << "Argument is of same type as Container\n";
+            loopIteratorType = true;
+            return;
+          }
+        }
+      }
     }
   }
 }
@@ -67,7 +105,7 @@ NonDeterPass::getFunctionParameters(Type *t) {
 // the IR function doing the actual allocation of a element to a set, have an "insert"
 void
 NonDeterPass::findInserts(Function *f) {
-  if (f->getName().find("insert") != StringRef::npos){
+  if (f->getName().find("unordered_set") != StringRef::npos && f->getName().find("insert") != StringRef::npos){
     insertFunctions.push_back(f);
   }
 }
@@ -78,6 +116,7 @@ NonDeterPass::findInserts(Function *f) {
 // then most probably the allocation is occuring in one of these functions
 void
 NonDeterPass::checkInserts() {
+  // outs() << "Size of InsertFunctions: " << insertFunctions.size() << "\n";
   for (auto &f:insertFunctions) {
     for (auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
       if (ab->getType()->isPointerTy()) {
@@ -85,20 +124,20 @@ NonDeterPass::checkInserts() {
         StructType *argType = dyn_cast<StructType>(p);
         if (argType){
           if (argType == detectedContainer) { 
-            outs() << "Argument Type is same as Container Type\n";
-            performDataFlow(f);
+            outs() << "Function used for Insert: " << f->getName() << "\n";
+            outs() << "Argument Type is same as Container\n";
+            createSearchSpace(f);
           }
         }
       }
     }
   }
-  outs() << "Size of Search Space: " << searchSpace.size() << "\n";
   searchFunctions();
 }
 
 // Go though this function and create a map of all the functions it calls
 void
-NonDeterPass::performDataFlow(Function *f) {
+NonDeterPass::createSearchSpace(Function *f) {
   for (auto &bb:*f) {
     for (auto &i : bb) {
       handleCallSite(CallSite(&i));
@@ -114,14 +153,16 @@ NonDeterPass::handleCallSite(CallSite cs) {
     return;
   }
   auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
-  if (called->getName().startswith("llvm") || called->getName().startswith("__")) {
+  if (called) {
+    if (called->getName().startswith("llvm") || called->getName().startswith("__")) {
     return;
+    }
+    auto someFunction =  searchSpace.find(called);
+    if (searchSpace.end() == someFunction) {
+      searchSpace.insert(std::make_pair(called,false));
+    }
+    createSearchSpace(called); // recurse
   }
-  auto someFunction =  searchSpace.find(called);
-  if (searchSpace.end() == someFunction) {
-    searchSpace.insert(std::make_pair(called,false));
-  }
-  performDataFlow(called); // recurse
 }
 
 // Go through the map of called functions from our main function(having the "insert")
@@ -130,8 +171,8 @@ void
 NonDeterPass::searchFunctions() {
   for (auto &kv:searchSpace){
     auto &f = kv.first;
-    if (checkAlocatorFunction(f)) {
-      outs() << f->getName() << "\n";
+    if (checkAllocatorFunction(f)) {
+      outs() << "Function storing the pointers: " << f->getName() << "\n";
       kv.second = true;
     }
   }
@@ -142,17 +183,25 @@ NonDeterPass::searchFunctions() {
 // Since the container(set/hash-map) is storing addresses and addresses are stored as ints
 // internally by the allocator
 bool 
-NonDeterPass::checkAlocatorFunction(Function *f){
+NonDeterPass::checkAllocatorFunction(Function *f){
   for (auto &bb:*f) {
     for (auto &i : bb) {
       PtrToIntInst *ptrtoInt = dyn_cast<PtrToIntInst>(&i);
       if (ptrtoInt){
         outs() << "ptrtoInt Instruction Found\n";
+        pointersAsAddress = true;
         return true;
       }
     }
   }
   return false;
+}
+
+void 
+NonDeterPass::detectNonDeterminism() {
+  if (pointersAsAddress && loopIteratorType) {
+    outs() << "Input file has non-deterministic behavior\n" ;
+  }
 }
 
 
