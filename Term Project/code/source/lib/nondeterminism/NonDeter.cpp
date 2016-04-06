@@ -24,8 +24,8 @@ RegisterPass<NonDeterPass> X{"nondeterminism",
 bool
 NonDeterPass::runOnModule(Module &m) {
     for (auto &f : m) {
-      if(!(f.getName().startswith("_") || f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
-        // outs() << "Function Name: " << f.getName() << "\n";
+      if(!(f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
+        findInserts(&f);
         for (auto &bb : f) {
           for (auto &i : bb) {
             checkAllocation(&i);
@@ -33,7 +33,93 @@ NonDeterPass::runOnModule(Module &m) {
         }
       }
     }
+    checkInserts();
   return false;
+}
+
+// this function finds all the functions that have a "insert"
+void
+NonDeterPass::findInserts(Function *f) {
+  if (f->getName().find("insert") != StringRef::npos){
+    insertFunctions.push_back(f);
+  }
+}
+
+void
+NonDeterPass::checkInserts() {
+  for (auto &f:insertFunctions) {
+    for (auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
+      if (ab->getType()->isPointerTy()) {
+        auto *p = ab->getType()->getPointerElementType();
+        StructType *argType = dyn_cast<StructType>(p);
+        if (argType){
+          if (argType == detectedContainer) { 
+            // data-flow analysis to be done on this function
+            outs() << "Same Type Detected in Insert Function Call\n";
+            performDataFlow(f);
+          }
+        }
+      }
+    }
+  }
+  if (allocatorFunction) {
+     checkAlocatorFunction(allocatorFunction);
+  }
+}
+
+void
+NonDeterPass::performDataFlow(Function *f) {
+  //outs() << "CallDepth: " << callDepthCounter << "-----------\n";
+  //outs() << "Callsites for: " << f->getName() << "\n";
+  //outs() << f->getName() << "----------\n";
+  callDepthCounter++;
+  for (auto &bb:*f) {
+    for (auto &i : bb) {
+      handleCallSite(CallSite(&i));
+    }
+  }
+}
+
+void 
+NonDeterPass::checkAlocatorFunction(Function *f){
+  outs() << "Call depth: " << callDepthCounter << "\n";
+  outs() << f->getName() << "\n";
+  for (auto &bb:*f) {
+    for (auto &i : bb) {
+      PtrToIntInst *ptrtoInt = dyn_cast<PtrToIntInst>(&i);
+      if (ptrtoInt){
+        outs() << "ptrtoInt Instruction Found\n";
+      }
+    }
+  }
+}
+
+void 
+NonDeterPass::handleCallSite(CallSite cs) {
+  if (!cs.getInstruction()) {
+    return;
+  }
+  auto called = dyn_cast<Function>(cs.getCalledValue()->stripPointerCasts());
+  if (called->getName().startswith("llvm") || called->getName().startswith("__")) {
+    return;
+  }
+  // searchPtrtoIntInstr(cs.getInstruction());
+  if (called->getName().startswith("_ZNKSt4hashIPSsEclES0_")) {
+    allocatorFunction = called;
+    return;
+  }
+  else {
+    performDataFlow(called);
+  }
+}
+
+void
+NonDeterPass::searchPtrtoIntInstr(Instruction *i){
+  outs() << *i << "\n";
+  PtrToIntInst *ptrtoInt = dyn_cast<PtrToIntInst>(i);
+  if (ptrtoInt) {
+    outs() << "ptrtoInt Instruction Found\n";
+  }
 }
 
 void
@@ -41,6 +127,7 @@ NonDeterPass::getFunctionParameters(Type *t) {
   StructType *st = dyn_cast<StructType>(t); 
   if (st) {
     if (st->getName().endswith("unordered_set")) {
+      detectedContainer = st;
       outs() << "Unordered Set Detected\n";
     }
   }
@@ -58,8 +145,8 @@ NonDeterPass::checkAllocation(Instruction *i) {
   // outs() << "Allocation Type: " << *p->getElementType() << "\n";
   if (p->getElementType()->isStructTy()) {
     getFunctionParameters(p->getElementType());
-    //outs() << *p->getElementType() << ", ";
-    //outs() << "ID: " << p->getElementType()->getTypeID() << "\n";
+    // outs() << *p->getElementType() << ", ";
+    // outs() << "ID: " << p->getElementType()->getTypeID() << "\n";
   }
   // if (p->getElementType()->getTypeID() == 12) {
   //   // outs() << "Type Name: " << *p->getElementType() << "\n";

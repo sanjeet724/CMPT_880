@@ -20,6 +20,13 @@ struct NonDeterPass : public llvm::ModulePass {
   llvm::DenseMap<llvm::Function*, std::vector<llvm::CallSite>> functionCallSiteMap;
   std::vector<llvm::Function*> candidates;
   std::vector<llvm::Function*> matchedVF;
+  std::vector<llvm::Function*> insertFunctions;
+  llvm::Type* detectedContainer;
+  unsigned callDepth = 5;
+  unsigned callDepthCounter = 0;
+  bool notFound = true;
+  llvm::Function* allocatorFunction;
+  llvm::DenseMap<llvm::Function*, std::vector<llvm::Function*>> parentChildFunctionMap;
 
 public:
   NonDeterPass()
@@ -30,6 +37,18 @@ public:
   getAnalysisUsage(llvm::AnalysisUsage &au) const override {
     au.setPreservesAll();
   }
+
+  void findInserts(llvm::Function *f); 
+
+  void checkInserts(); 
+
+  void performDataFlow(llvm::Function *f);
+
+  void checkAlocatorFunction(llvm::Function *f);
+
+  void searchPtrtoIntInstr(llvm::Instruction *i);
+
+  void handleCallSite(llvm::CallSite cs);
 
   void checkAllocation(llvm::Instruction *i);
 
