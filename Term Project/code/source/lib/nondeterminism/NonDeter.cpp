@@ -90,7 +90,12 @@ NonDeterPass::getFunctionParameters(Type *t, Instruction *i) {
       outs() << "Type of Container: Unordered Set \n";
       return;
     }
-    if (st->getName().endswith("_Node_iterator")) {
+    else if (st->getName().endswith("unordered_map")) {
+      detectedContainer = st;
+      outs() << "Type of Container: Unordered Map \n";
+      return;
+    }
+    else if (st->getName().endswith("_Node_iterator")) {
       detectedIterator = st;
       return;
     }
@@ -99,8 +104,10 @@ NonDeterPass::getFunctionParameters(Type *t, Instruction *i) {
 
 void
 NonDeterPass::findIterators(Function *f) {
-  if(f->getName().find("unordered_set") != StringRef::npos && (f->getName().find("beginEv") != StringRef::npos ||
-    f->getName().find("endEv") != StringRef::npos)){
+  if((f->getName().find("unordered_set") != StringRef::npos ||
+     f->getName().find("unordered_map") != StringRef::npos) && 
+     (f->getName().find("beginEv") != StringRef::npos ||
+     f->getName().find("endEv") != StringRef::npos)){
     iteratorFunctions.push_back(f);
   }
 }
@@ -129,7 +136,9 @@ NonDeterPass::checkIterators() {
 // the IR function doing the actual allocation of a element to a set, have an "insert"
 void
 NonDeterPass::findInserts(Function *f) {
-  if (f->getName().find("unordered_set") != StringRef::npos && f->getName().find("insert") != StringRef::npos){
+  if ((f->getName().find("unordered_set") != StringRef::npos || 
+       f->getName().find("unordered_map") != StringRef::npos) &&
+       f->getName().find("insert") != StringRef::npos){
     insertFunctions.push_back(f);
   }
 }
