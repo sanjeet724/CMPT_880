@@ -14,6 +14,8 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/Passes.h"
 
 #include <memory>
 #include <string>
@@ -95,6 +97,7 @@ main (int argc, char **argv, const char **env) {
 
   // Build up all of the passes that we want to run on the module.
   PassManager pm;
+  pm.add(new LoopInfoWrapperPass());
   pm.add(new nondeterminism::NonDeterPass);
   pm.run(*module);
 

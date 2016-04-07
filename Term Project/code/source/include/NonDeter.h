@@ -7,6 +7,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/Passes.h"
 #include <unordered_map>
 #include <unordered_set>
 #include <deque>
@@ -21,6 +23,8 @@ struct NonDeterPass : public llvm::ModulePass {
   llvm::Type* detectedContainer;
   llvm::DenseMap<llvm::Function*, bool> searchSpace; 
   llvm::Type* detectedIterator;
+  llvm::LoopInfo *LI;
+  std::vector<llvm::Loop*> loopVector;
   std::vector<llvm::Function*> iteratorFunctions;
   bool pointersAsAddress = false;
   bool loopIteratorType = false;
@@ -32,8 +36,9 @@ public:
     : ModulePass(ID)
       { }
 
-  void
+  virtual void
   getAnalysisUsage(llvm::AnalysisUsage &au) const override {
+    au.addRequired<llvm::LoopInfoWrapperPass>();
     au.setPreservesAll();
   }
 
@@ -52,6 +57,10 @@ public:
   bool analyzeCallSite(llvm::Function *f);
 
   void checkAllocation(llvm::Instruction *i);
+
+  void handleLoops(llvm::Function *f);
+
+  void analyzeLoop(llvm::Loop *l);
 
   bool runOnModule(llvm::Module &m) override;
 

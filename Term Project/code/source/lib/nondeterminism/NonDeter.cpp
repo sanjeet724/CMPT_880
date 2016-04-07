@@ -25,9 +25,10 @@ bool
 NonDeterPass::runOnModule(Module &m) {
   for (auto &f : m) {
     totalIRFunctions++;
-    if(!(f.getName().startswith("llvm") || f.getName().startswith("vsn"))) {
+    if(!(f.getName().startswith("llvm") || f.getName().startswith("vsn")) && !f.isDeclaration()) {
       findInserts(&f);
       findIterators(&f);
+      // handleLoops(&f); // experimental - this may not be a better way
       for (auto &bb : f) {
         for (auto &i : bb) {
           checkAllocation(&i);
@@ -39,6 +40,29 @@ NonDeterPass::runOnModule(Module &m) {
   checkIterators();
   detectNonDeterminism();
   return false;
+}
+
+void
+NonDeterPass::handleLoops(Function *f){
+  LI = &getAnalysis<LoopInfoWrapperPass>(*f).getLoopInfo();
+  if (LI) {
+    for (auto &loop:*LI){
+      analyzeLoop(loop);
+    }
+  }
+}
+
+// this might not be a better way to implement as there are many loops
+// we are specifically looking for node iterators rather than loops
+void
+NonDeterPass::analyzeLoop(Loop *l) {
+  // outs() << "------Loop Analysis for In Function: " << l->getHeader()->getParent()->getName() << "-----\n";
+  for (auto bb = l->block_begin(), be = l->block_end(); bb!= be; bb++){
+    // outs() << **bb << "\n";
+    // for (auto &i:bb) {
+    //   outs() << *i << "\n";
+    // }
+  }
 }
 
 
@@ -185,10 +209,10 @@ NonDeterPass::analyzeCallSite(Function *f) {
   return false;
 }
 
-// Go through the map of called functions from our main function(having the "insert")
-// Specifically look for PtrToIntInst instructions in these functions
 // This is not needed anymore as we are doing call-site sensitivity
 // Data-Flow Analysis : - check if an address is getting coverted to an integer
+// Go through the map of called functions from our main function(having the "insert")
+// Specifically look for PtrToIntInst instructions in these functions
 void
 NonDeterPass::searchFunctions() {
   for (auto &kv:searchSpace){
