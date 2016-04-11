@@ -114,6 +114,7 @@ NonDeterPass::findIterators(Function *f) {
 
 void
 NonDeterPass::checkIterators() {
+  outs() << "Size of IteratorFunctions: " << insertFunctions.size() << "\n";
   for (auto &f:iteratorFunctions) {
     for (auto ab = f->arg_begin(), ae = f->arg_end(); ab!=ae; ab++){
       if (ab->getType()->isPointerTy()){
@@ -149,7 +150,7 @@ NonDeterPass::findInserts(Function *f) {
 // then most probably the allocation is occuring in one of these functions
 void
 NonDeterPass::checkInserts() {
-  // outs() << "Size of InsertFunctions: " << insertFunctions.size() << "\n";
+  outs() << "Size of InsertFunctions: " << insertFunctions.size() << "\n";
   for (auto &f:insertFunctions) {
     for (auto ab = f->arg_begin(), ae = f->arg_end();ab != ae; ab++) {
       if (ab->getType()->isPointerTy()) {
